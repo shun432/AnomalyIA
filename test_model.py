@@ -184,12 +184,12 @@ def run_LSTM(Threshold):
 
 def run_AutoEncoder(Threshold):
     raw_data, _, label = sampledata.OneDimTimeSeries.make_value()
-    data, target, label = classify.LSTMs.preprocessing(np.array(raw_data), np.array(label))
+    data, target = classify.AutoEncoder.preprocessing(np.array(raw_data))
 
     model = classify.AutoEncoder.modeling()
     history, predicted = classify.AutoEncoder.dofit(data, model)
 
-    length = classify.LSTMs.reference_len
+    length = classify.AutoEncoder.reference_len
 
     pred = []
     for i in range(len(predicted)):

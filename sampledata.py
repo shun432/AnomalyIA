@@ -109,6 +109,14 @@ class OneDimTimeSeries:
 
             time += self.DT
 
+        x = list(range(len(ano_value)))
+        print(len(value))
+        print(len(x))
+        print(len(ano_value))
+        pyplot.plot(x, value)
+        pyplot.scatter(x, ano_value, marker=".", color="red")
+        pyplot.show()
+
         return value, ano_value, label
 
 if __name__ == '__main__':
