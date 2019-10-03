@@ -16,6 +16,10 @@ class OneDimTimeSeries:
     # 全体的な周波数(通常は１くらい)
     freq = 3
 
+    #異常確率
+    Pabpt = 0.6
+    Pabran = 0.03
+
     # 各ノイズの大きさ
     # 正常ノイズ
     Q = 0.1
@@ -27,7 +31,7 @@ class OneDimTimeSeries:
     Qabran_min = 2.0
 
     # どのノイズを乗せるか( 0 or 1 or other )
-    noise_type = 1
+    noise_type = 0
 
     if(noise_type == 0):
         abpt = 1
@@ -94,8 +98,8 @@ class OneDimTimeSeries:
                     if(abs(A) > self.Qabran_min):
                         break
 
-            abran_val, flag = self.abnormal_range_function(0.1, flag, A)
-            abpt_val = self.abnormal_point_function(0.6)
+            abran_val, flag = self.abnormal_range_function(self.Pabran, flag, A)
+            abpt_val = self.abnormal_point_function(self.Pabpt)
 
             value.append(self.normal_function(time) + np.random.randn() * self.Q
                          + self.abpt * abpt_val + self.abran * abran_val)
@@ -110,9 +114,6 @@ class OneDimTimeSeries:
             time += self.DT
 
         x = list(range(len(ano_value)))
-        print(len(value))
-        print(len(x))
-        print(len(ano_value))
         pyplot.plot(x, value)
         pyplot.scatter(x, ano_value, marker=".", color="red")
         pyplot.show()
@@ -124,10 +125,6 @@ if __name__ == '__main__':
     data, ano_data, _ = OneDimTimeSeries.make_value()
 
     x = list(range(len(ano_data)))
-    print(len(data))
-    print(len(x))
-    print(len(ano_data))
     pyplot.plot(x, data)
     pyplot.scatter(x, ano_data, marker=".", color="red")
     pyplot.savefig("sample_data.png")
-    pyplot.show()

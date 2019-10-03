@@ -148,7 +148,7 @@ def run_LSTM(Threshold):
         if (predicted[i] > Threshold):
             pred.append(-15)
         else:
-            pred.append(raw_data[i+length])
+            pred.append(raw_data[i+length-1])
 
         # #targetを予測
         # if (abs(predicted[i]*13 - raw_data[i+12]) < Threshold):
@@ -161,7 +161,7 @@ def run_LSTM(Threshold):
     plt.plot(range(0, len(raw_data)), raw_data, color="b", label="data")
     plt.plot(range(length, len(predicted) + length), predicted, color="r", label="rawOutput")
     plt.scatter(range(length, len(pred) + length), pred, color="g", label="RecogAnomaly")
-    plt.scatter(range(length, len(label) + length), label, color="y", label="TruthAnomaly")
+    plt.scatter(range(length, len(label) + length), label, label, color="y", label="TruthAnomaly")
     # plt.plot(range(0 + len(raw_data) - 24, len(future_result) + len(raw_data) - 24), future_result, color="orange",
     #          label="future")
     plt.legend()
@@ -183,7 +183,7 @@ def run_LSTM(Threshold):
 
 
 def run_AutoEncoder(Threshold):
-    raw_data, _, label = sampledata.OneDimTimeSeries.make_value()
+    raw_data, ano_data, label = sampledata.OneDimTimeSeries.make_value()
     data, target = classify.AutoEncoder.preprocessing(np.array(raw_data))
 
     model = classify.AutoEncoder.modeling()
@@ -192,6 +192,8 @@ def run_AutoEncoder(Threshold):
     length = classify.AutoEncoder.reference_len
 
     pred = []
+    offset = classify.AutoEncoder.offset
+
     for i in range(len(predicted)):
         # #labelを予測
         # if (predicted[i] > 0):
@@ -200,16 +202,16 @@ def run_AutoEncoder(Threshold):
         #     pred.append(raw_data[i+length])
 
         #targetを予測
-        if (abs(predicted[i]*13 - raw_data[i+length]) < Threshold):
+        if (abs((predicted[i][length-1]*offset-offset/2) - raw_data[i+length-1]) < Threshold):
             pred.append(-15)
         else:
-            pred.append(raw_data[i+length])
+            pred.append(raw_data[i+length-1])
 
     # Plot Wave
     plt.figure()
-    plt.plot(range(0, len(raw_data)), raw_data, color="b", label="raw")
-    plt.plot(range(length, len(predicted) + length), predicted*13, color="r", label="predict")
-    plt.scatter(range(length, len(pred) + length), pred, color="g", label="anomaly")
+    plt.plot(range(0, len(raw_data)), raw_data, color="b", label="data")
+    plt.scatter(range(length, len(pred) + length), pred, marker="o", color="g", label="anomaly")
+    plt.scatter(range(0, len(ano_data)), ano_data, marker=".", color="r", label="TruthAnomaly")
     # plt.plot(range(0 + len(raw_data) - 24, len(future_result) + len(raw_data) - 24), future_result, color="orange",
     #          label="future")
     plt.legend()
@@ -229,9 +231,35 @@ def run_AutoEncoder(Threshold):
     plt.close()
 
 
+def SSA():
+
+    sst, ano_data, label = sampledata.OneDimTimeSeries.make_value()
+    sst = np.array(sst)
+
+    ano = [[]]
+
+    for s in range(1, 6):
+        score = classify.SSA.SSA_CD(series=sst,
+                                    standardize=False,
+                                    w=8, lag=24, ns_h=s, ns_t=1)
+        ano.append(score[0])
+
+    x = list(range(len(sst)))
+    for i in range(1, 3):
+        plt.plot(x, sst)
+        plt.plot(list(range(len(ano[i]))), np.array(ano[i]) * 8 - 15, color="green")
+        plt.scatter(x, ano_data, marker=".", color="red")
+        save_fig("SSA")
+        plt.show()
+
+
+
+
+
 if __name__ == '__main__':
     #run_knn(0.002)
     #run_OCsvm()
     #run_LPF(1)
-    run_LSTM(0.5)
-    #run_AutoEncoder(1)
+    #run_LSTM(0.3)
+    run_AutoEncoder(0.6)
+    #SSA()
