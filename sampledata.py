@@ -17,7 +17,7 @@ class OneDimTimeSeries:
     freq = 3
 
     #異常確率
-    Pabpt = 0.6
+    Pabpt = 0.3
     Pabran = 0.03
 
     # 各ノイズの大きさ
@@ -31,7 +31,7 @@ class OneDimTimeSeries:
     Qabran_min = 2.0
 
     # どのノイズを乗せるか( 0 or 1 or other )
-    noise_type = 0
+    noise_type = 2
 
     if(noise_type == 0):
         abpt = 1

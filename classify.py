@@ -67,11 +67,12 @@ class LSTMs:
     '''
 
     reference_len = 400
+    offset = 13
 
     @classmethod
     def preprocessing(self, raw_data, label):
         # read data
-        raw_data = raw_data / 13
+        raw_data = raw_data / self.offset
 
         # Make input data
         x, y = [], []
@@ -158,6 +159,8 @@ class AutoEncoder:
 
         model.add(Dense(round(self.reference_len/2), activation='relu', input_shape=(self.reference_len, )))
         model.add(Dense(round(self.reference_len/4), activation='relu'))
+        # model.add(Dense(round(self.reference_len/8), activation='relu'))
+        # model.add(Dense(round(self.reference_len/16), activation='relu'))
         model.add(Dense(round(self.reference_len/8), activation='relu'))
         model.add(Dense(round(self.reference_len/4), activation='relu'))
         model.add(Dense(round(self.reference_len/2), activation='relu'))
