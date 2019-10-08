@@ -231,26 +231,39 @@ def run_AutoEncoder(Threshold):
     plt.close()
 
 
-def SSA():
+def SSA(s=2):
 
     sst, ano_data, label = sampledata.OneDimTimeSeries.make_value()
     sst = np.array(sst)
 
     ano = [[]]
 
-    for s in range(1, 6):
-        score = classify.SSA.SSA_CD(series=sst,
-                                    standardize=False,
-                                    w=8, lag=24, ns_h=s, ns_t=1)
-        ano.append(score[0])
-
+    score = classify.SSA.SSA_CD(series=sst,
+                                standardize=True,
+                                w=70, lag=24, ns_h=s, ns_t=1)
+    ano.append(score[0])
     x = list(range(len(sst)))
-    for i in range(1, 3):
-        plt.plot(x, sst)
-        plt.plot(list(range(len(ano[i]))), np.array(ano[i]) * 8 - 15, color="green")
-        plt.scatter(x, ano_data, marker=".", color="red")
-        save_fig("SSA")
-        plt.show()
+
+    plt.plot(x, sst)
+    plt.plot(list(range(len(ano[1]))), np.array(ano[1]) * 150 - 15, color="green")
+    plt.scatter(x, ano_data, marker=".", color="red")
+    save_fig("SSA")
+    plt.show()
+
+
+    # for s in range(1, 3):
+    #     score = classify.SSA.SSA_CD(series=sst,
+    #                                 standardize=False,
+    #                                 w=40, lag=24, ns_h=s, ns_t=1)
+    #     ano.append(score[0])
+    #
+    # x = list(range(len(sst)))
+    # for i in range(1, 3):
+    #     plt.plot(x, sst)
+    #     plt.plot(list(range(len(ano[i]))), np.array(ano[i]) * 8 - 15, color="green")
+    #     plt.scatter(x, ano_data, marker=".", color="red")
+    #     save_fig("SSA")
+    #     plt.show()
 
 
 
@@ -261,5 +274,5 @@ if __name__ == '__main__':
     #run_OCsvm()
     #run_LPF(1)
     #run_LSTM(0.3)
-    run_AutoEncoder(0.6)
-    #SSA()
+    #run_AutoEncoder(0.6)
+    SSA(2)

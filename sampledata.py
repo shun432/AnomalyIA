@@ -31,7 +31,7 @@ class OneDimTimeSeries:
     Qabran_min = 2.0
 
     # どのノイズを乗せるか( 0 or 1 or other )
-    noise_type = 2
+    noise_type = 1
 
     if(noise_type == 0):
         abpt = 1
