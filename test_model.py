@@ -3,6 +3,7 @@ import sampledata, classify
 from matplotlib import pyplot as plt
 import numpy as np
 import os
+import time
 
 
 '''
@@ -238,9 +239,16 @@ def SSA(s=2):
 
     ano = [[]]
 
+    start = time.time()
+
     score = classify.SSA.SSA_CD(series=sst,
                                 standardize=True,
                                 w=70, lag=24, ns_h=s, ns_t=1)
+
+    elapsed_time = time.time() - start
+
+    print("elapsed_time:{0}".format(elapsed_time) + "[sec]")
+
     ano.append(score[0])
     x = list(range(len(sst)))
 
