@@ -6,6 +6,8 @@ import os
 import time
 
 
+
+
 '''
         モデルを実行する関数を置く場所
 '''
@@ -232,7 +234,7 @@ def run_AutoEncoder(Threshold):
     plt.close()
 
 
-def SSA(s=2):
+def run_SSA(s=2):
 
     sst, ano_data, label = sampledata.OneDimTimeSeries.make_value()
     sst = np.array(sst)
@@ -273,14 +275,61 @@ def SSA(s=2):
     #     save_fig("SSA")
     #     plt.show()
 
+def run_SVR():
+
+    # from sklearn.datasets import load_boston
+    # from sklearn.model_selection import train_test_split
+    # boston = load_boston()
+    # X, Xtest, y, ytest = train_test_split(boston['data'], boston['target'], test_size=0.2, random_state=114514)
+    #
+    # print(np.shape(X))
 
 
+    # 訓練データ、テストデータに分割
+    data, ano_data, label = sampledata.OneDimTimeSeries.make_value()
+
+    data = np.array(data)
+    label = np.array(label)
+
+    x = data.reshape(-1, 1)
+
+    # (それぞれ303 101 102 = サンプル合計は506)
+    print("ガウシアンカーネルのSVR")
+    print()
+
+    data_norm = classify.SVRs.preprocessing(x)
+
+    print("1")
+
+    gridsearch = classify.SVRs.tuning(data_norm, label)
+
+    print("2")
+
+    regr, train_indices, valid_indices = classify.SVRs.do_fit(data_norm, label, gridsearch)
+
+    # テストデータの精度を計算
+    print("テストデータにフィット")
+    # print("テストデータの精度 =", regr.score(Xtest_norm, ytest))
+    # print()
+    print("※参考")
+    print("訓練データの精度 =", regr.score(data_norm[train_indices, :], label[train_indices]))
+    print("交差検証データの精度 =", regr.score(data_norm[valid_indices, :], label[valid_indices]))
+
+    predicted = regr.predict(data_norm)
+
+    x = list(range(len(ano_data)))
+    plt.plot(x, data)
+    plt.scatter(x, predicted, marker="o", color="green")
+    plt.scatter(x, ano_data, marker=".", color="red")
+    save_fig("SVR")
+    plt.show()
 
 
 if __name__ == '__main__':
     #run_knn(0.002)
     #run_OCsvm()
-    #run_LPF(1)
+    #run_LPF(1.5)
     #run_LSTM(0.3)
     #run_AutoEncoder(0.6)
-    SSA(2)
+    run_SSA(2)
+    #run_SVR()

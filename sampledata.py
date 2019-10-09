@@ -18,7 +18,7 @@ class OneDimTimeSeries:
 
     #異常確率
     Pabpt = 0.3
-    Pabran = 0.03
+    Pabran = 0.05
 
     # 各ノイズの大きさ
     # 正常ノイズ
@@ -31,7 +31,7 @@ class OneDimTimeSeries:
     Qabran_min = 2.0
 
     # どのノイズを乗せるか( 0 or 1 or other )
-    noise_type = 1
+    noise_type = 0
 
     if(noise_type == 0):
         abpt = 1
@@ -66,7 +66,7 @@ class OneDimTimeSeries:
         if probability * 0.01 > random.random():
             while (True):
                 size = self.Qabpt_max * random.uniform(-1, 1)
-                if(size > self.Qabpt_min):
+                if(abs(size) > self.Qabpt_min):
                     return size
         return 0
 
