@@ -1,7 +1,7 @@
 import numpy as np
 import math
 import random
-from matplotlib import pyplot
+from matplotlib import pyplot as plt
 
 
 # 一次元の時系列データを作る
@@ -31,7 +31,7 @@ class OneDimTimeSeries:
     Qabran_min = 2.0
 
     # どのノイズを乗せるか( 0 or 1 or other )
-    noise_type = 0
+    noise_type = 1
 
     if(noise_type == 0):
         abpt = 1
@@ -114,17 +114,197 @@ class OneDimTimeSeries:
             time += self.DT
 
         x = list(range(len(ano_value)))
-        pyplot.plot(x, value)
-        pyplot.scatter(x, ano_value, marker=".", color="red")
-        pyplot.show()
+        plt.plot(x, value)
+        plt.scatter(x, ano_value, marker=".", color="red")
+        plt.show()
 
         return value, ano_value, label
 
+
+
+# アプリのサンプルデータ
+class ApplicationData:
+
+    # アプリの特徴ベクトルなどのパラメータ
+    def __init__(self):
+
+        self.typelength = 0
+        self.DataName = []
+        self.DataType = []
+        self.featureVector = []
+        self.trend = []
+        self.trend_idx = []
+
+    # 特徴ベクトルの基底を追加（収益、DL数、カテゴリーなど）
+    def addDataType(self, type, name="NoNamed"):
+
+        self.typelength += 1
+        self.DataName.append(name)
+        self.DataType.append(type)
+        self.featureVector.append([])
+
+    # 時系列を進める
+    def update(self, trend_rule):
+
+        newdata = []
+
+        for i in range(self.typelength):
+            newdata.append(self.DataType[i].makedata())
+            self.featureVector[i].append(newdata[i])
+
+        value, applied_idx = trend_rule.apply(newdata)
+        self.trend.append(value)
+        self.trend_idx.append(applied_idx)
+
+
+# 一様分布のスカラー乱数を生成（thread=Trueで直前のデータに上乗せ）
+class ScalarNormType:
+
+    def __init__(self, mu, sigma, thread=False):
+
+        self.mu = mu
+        self.sigma = sigma
+        self.thread = thread
+        self.lastdata = 0
+
+    def makedata(self):
+
+        if not self.thread:
+            return random.normalvariate(self.mu, self.sigma)
+        else:
+            self.lastdata += random.normalvariate(self.mu, self.sigma)
+            return self.lastdata
+
+
+# 一様分布のスカラー乱数を生成（thread=Trueで直前のデータに上乗せ）
+class ScalarUnifType:
+
+    def __init__(self, min, max, thread=False):
+
+        self.min = min
+        self.max = max
+        self.thread = thread
+        self.lastdata = 0
+
+    def makedata(self):
+
+        if not self.thread:
+            return random.uniform(self.min, self.max)
+        else:
+            self.lastdata += random.uniform(self.min, self.max)
+            return self.lastdata
+
+
+# バイナリデータを生成（値の変化確率possibilityは0~1）
+class BinaryType:
+
+    def __init__(self, possibility=0.0, initval=0):
+
+        self.lastdata = initval
+        self.possibility = possibility
+
+    def change(self):
+
+        if self.lastdata is 0:
+            self.lastdata = 1
+        else:
+            self.lastdata = 0
+
+    def makedata(self):
+
+        if random.random() < self.possibility:
+            self.change()
+
+        return self.lastdata
+
+
+# 流行のルールを管理する。どの特徴を重視するかをwで調節。複数のルールをwに格納できる
+class TrendRule:
+
+    def __init__(self, init_w, datalen, delta=0.1):
+
+        self.w = init_w
+        self.datalen = datalen
+        self.delta = delta
+
+    # ルールを適用して流行度合いを返す
+    def apply(self, currentdata):
+
+        val_max = 0
+        applied_idx = 0
+
+        for i in range(len(self.w)):
+            val = 0
+            for j in range(self.datalen):
+                val += self.w[i][j][-1] * currentdata[j]
+            if val > val_max:
+                applied_idx = i
+                val_max = val
+
+        return val_max, applied_idx
+
+    # ルールを更新する
+    def update(self):
+
+        for i in range(len(self.w)):
+            for j in range(len(self.w[i])):
+                w = self.w[i][j][-1] + self.delta * random.uniform(-1, 1)
+                self.w[i][j].append(min(max(w, -1.0), 1.0))
+
+
+
 if __name__ == '__main__':
 
-    data, ano_data, _ = OneDimTimeSeries.make_value()
+    app1 = ApplicationData()
 
-    x = list(range(len(ano_data)))
-    pyplot.plot(x, data)
-    pyplot.scatter(x, ano_data, marker=".", color="red")
-    pyplot.savefig("sample_data.png")
+    app1.addDataType(ScalarNormType(mu=0, sigma=1), "Norm")
+    app1.addDataType(ScalarUnifType(min=-1, max=1), "Unif")
+    app1.addDataType(ScalarUnifType(min=-1, max=1, thread=True), "Unif-th")
+    app1.addDataType(BinaryType(possibility=0, initval=1), "Bina")
+
+
+    # データタイプを増やすと横に広げる、縦に広げると並列ルールが増える
+    init_w = [[[ 0.2], [ 0.5], [ 0.2], [-0.1]],
+              [[ 0.2], [ 0.5], [-0.5], [ 0.3]],
+              [[ 0.2], [ 0.2], [ 0.5], [-0.3]],
+              [[ 0.0], [ 0.0], [ 0.8], [ 0.2]]]
+
+    trend_rule = TrendRule(init_w, app1.typelength, delta=0.05)
+
+    for i in range(100):
+        app1.update(trend_rule)
+        trend_rule.update()
+
+    print("create data completed...")
+
+    cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
+
+    x = list(range(100))
+    for i in range(app1.typelength):
+        plt.plot(x, app1.featureVector[i], color=cycle[i], label=app1.DataName[i])
+    plt.legend()
+    plt.savefig("app1_data.png")
+
+    plt.clf()
+
+    width = 0.8 / len(trend_rule.w)
+    for i in range(len(trend_rule.w)):
+        for j in range(len(trend_rule.w[i])):
+            bottom = np.array(i * 2.0)
+            plt.bar(x + np.array([width * float(j)]*len(x)), trend_rule.w[i][j][:-1],
+                    color=cycle[j], align='edge', bottom=bottom, width=width)
+
+    plt.bar(x, [0.05] * len(x), color="blue", align='edge', bottom=np.array(app1.trend_idx)*2, width=0.8)
+    plt.plot(x, app1.trend[:], color="black")
+
+    plt.savefig("app1_ruleweight.png")
+
+
+
+
+    # data, ano_data, _ = OneDimTimeSeries.make_value()
+    #
+    # x = list(range(len(ano_data)))
+    # plt.plot(x, data)
+    # plt.scatter(x, ano_data, marker=".", color="red")
+    # plt.savefig("sample_data.png")
