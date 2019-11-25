@@ -131,7 +131,7 @@ class ApplicationData:
         self.typelength = 0
         self.DataName = []
         self.DataType = []
-        self.featureVector = []
+        self.featureVector = []         # featureVector[特徴][時系列]
         self.trend = []
         self.trend_idx = []
 
@@ -257,11 +257,10 @@ if __name__ == '__main__':
 
     app1 = ApplicationData()
 
-    app1.addDataType(ScalarNormType(mu=0, sigma=1), "Norm")
-    app1.addDataType(ScalarUnifType(min=-1, max=1), "Unif")
-    app1.addDataType(ScalarUnifType(min=-1, max=1, thread=True), "Unif-th")
+    app1.addDataType(ScalarNormType(mu=0, sigma=0.05, thread=True), "Norm")
+    app1.addDataType(ScalarNormType(mu=0, sigma=0.05, thread=True), "Norm")
+    app1.addDataType(ScalarNormType(mu=0, sigma=0.05, thread=True), "Norm")
     app1.addDataType(BinaryType(possibility=0, initval=1), "Bina")
-
 
     # データタイプを増やすと横に広げる、縦に広げると並列ルールが増える
     init_w = [[[ 0.2], [ 0.5], [ 0.2], [-0.1]],
@@ -285,6 +284,8 @@ if __name__ == '__main__':
     plt.legend()
     plt.savefig("app1_data.png")
 
+    plt.show()
+
     plt.clf()
 
     width = 0.8 / len(trend_rule.w)
@@ -299,7 +300,7 @@ if __name__ == '__main__':
 
     plt.savefig("app1_ruleweight.png")
 
-
+    plt.show()
 
 
     # data, ano_data, _ = OneDimTimeSeries.make_value()

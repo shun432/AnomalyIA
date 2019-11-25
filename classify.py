@@ -6,7 +6,6 @@ from keras.models import Sequential
 from keras.layers.core import Dense, Activation
 from keras.layers.recurrent import LSTM
 from keras.optimizers import Adam
-import numpy as np
 import matplotlib.pyplot as plt
 from itertools import islice
 plt.style.use('seaborn-whitegrid')
@@ -22,26 +21,25 @@ from sklearn.model_selection import GridSearchCV
 
 class OneClassSVM:
 
-    clf = svm.OneClassSVM(nu=0.03, kernel='rbf', gamma='auto')
+    def __init__(self):
+        self.clf = svm.OneClassSVM(nu=0.03, kernel='rbf', gamma='auto')
 
-    @classmethod
     def dofit(self, data, label):
         self.clf.fit(data, label)
 
-    @classmethod
     def dopredict(self, data):
         pred = self.clf.predict(data)
         return pred
 
+
 class kNN:
 
-    NN = NearestNeighbors(n_neighbors=10)
+    def __init__(self):
+        self.NN = NearestNeighbors(n_neighbors=10)
 
-    @classmethod
     def dofit(self, data):
         self.NN.fit(data)
 
-    @classmethod
     def dopredict(self, data):
         dist, _ = self.NN.kneighbors(data)
         dist = dist / np.max(dist)
@@ -50,11 +48,9 @@ class kNN:
 
 class LPF:
 
-    @classmethod
     def low_pass(self, past, now = 0, alpha = 0.1):
         return alpha * now + (1 - alpha) * past
 
-    @classmethod
     def model(self, data):
         lowpassed = []
         lowpassed.append(0)
@@ -69,10 +65,10 @@ class LSTMs:
     http://cedro3.com/ai/keras-lstm/
     '''
 
-    reference_len = 400
-    offset = 13
+    def __init__(self):
+        self.reference_len = 400
+        self.offset = 13
 
-    @classmethod
     def preprocessing(self, raw_data, label):
         # read data
         raw_data = raw_data / self.offset
@@ -94,7 +90,6 @@ class LSTMs:
 
         return data, target, label
 
-    @classmethod
     def modeling(self):
         # Model building
         length_of_sequence = self.reference_len
@@ -110,14 +105,12 @@ class LSTMs:
 
         return model
 
-    @classmethod
     def dofit(self, data, target, model, label):
         # Learning
         history = model.fit(data, label, batch_size=128, epochs=30, validation_split=0.1)
         predicted = model.predict(data)
         return history, predicted
 
-    @classmethod
     def predict_future(self, data, model):
         # Future prediction
         future_test = data[len(data) - 1]
@@ -134,13 +127,92 @@ class LSTMs:
         return future_result
 
 
+
+class LSTMa:
+
+    '''
+    http://cedro3.com/ai/keras-lstm/
+    '''
+
+    def __init__(self, data_dim, timesteps=10):
+        self.timesteps = timesteps
+        self.data_dim = data_dim
+        self.offset = 13
+
+        self.model = None
+
+        #datashapeを使ってモデルを作っておく
+        self.modeling()
+
+    # def preprocessing(self, raw_data, label):
+    #     # read data
+    #     raw_data = raw_data / self.offset
+    #
+    #     # Make input data
+    #     x, y = [], []
+    #     length = self.reference_len
+    #     for i in range(len(raw_data) - length):
+    #         x.append(raw_data[i : i+length])
+    #         y.append(raw_data[i + length])
+    #     data = np.array(x).reshape(len(x), length, 1)
+    #     target = np.array(y).reshape(len(y), 1)
+    #
+    #     #labelの数の帳尻合わせ。length個のデータを参照、length番目のデータのラベルを予想
+    #     for j in range(length-1):
+    #         label = np.delete(label, 0)
+    #     label = np.delete(label, len(label)-1)
+    #     label = np.array(label).reshape(len(label), 1)
+    #
+    #     return data, target, label
+
+    def modeling(self):
+        # Model building
+        in_out_neurons = 1
+        n_hidden = 32
+
+        model = Sequential()
+        model.add(LSTM(n_hidden, return_sequences=True))
+        model.add(LSTM(n_hidden, return_sequences=True))
+        model.add(LSTM(n_hidden))
+        model.add(Dense(in_out_neurons))
+        model.add(Activation("linear"))
+        optimizer = Adam(lr=0.001)
+        model.compile(loss="mean_squared_error", optimizer=optimizer)
+
+        self.model = model
+
+    def dofit(self, data, trend):
+        # Learning
+        history = self.model.fit(data, trend, epochs=2, validation_split=0.1)
+        return history
+
+    def dopredict(self, data):
+        predicted = self.model.predict(data)
+        return predicted
+
+    # def predict_future(self, data, model):
+    #     # Future prediction
+    #     future_test = data[len(data) - 1]
+    #     future_result = []
+    #     time_length = self.reference_len
+    #
+    #     for i in range(24):
+    #         test_data = np.reshape(future_test, (1, time_length, 1))
+    #         batch_predict = model.predict(test_data)
+    #         future_test = np.delete(future_test, 0)
+    #         future_test = np.append(future_test, batch_predict)
+    #         future_result = np.append(future_result, batch_predict)
+    #
+    #     return future_result
+
+
+
 class AutoEncoder:
 
-    reference_len = 64
+    def __init__(self):
+        self.reference_len = 64
+        self.offset = 13
 
-    offset = 13
-
-    @classmethod
     def preprocessing(self, raw_data):
         # read data
         raw_data = (raw_data + self.offset/2) / self.offset
@@ -156,7 +228,6 @@ class AutoEncoder:
 
         return data, target
 
-    @classmethod
     def modeling(self):
         model = Sequential()
 
@@ -173,7 +244,6 @@ class AutoEncoder:
 
         return model
 
-    @classmethod
     def dofit(self, data, model):
         history = model.fit(data, data, batch_size=128, verbose=1, epochs=100, validation_split=0.2)
         predicted = model.predict(data)
@@ -188,7 +258,6 @@ class SSA:
 
 
     # SSA 用の関数
-    @classmethod
     def window(self, seq, n):
         """
         window 関数で要素を1づつずらした2次元配列を出す. 戻り値は generator
@@ -203,7 +272,6 @@ class SSA:
             result = result[1:] + (elem,)
             yield result
 
-    @classmethod
     def SSA_anom(self, test, traject, w, ncol_t, ncol_h, ns_t, ns_h,
                  normalize=False):
         """
@@ -242,7 +310,6 @@ class SSA:
                                  )[0]
         return (anom, ratio_t, ratio_h)
 
-    @classmethod
     def SSA_CD(self, series, w, lag,
                ncol_h=None, ncol_t=None,
                ns_h=None, ns_t=None,
@@ -304,7 +371,6 @@ class SVRs:
     https://qiita.com/koshian2/items/baa51826147c3d538652
     '''
 
-    @classmethod
     def preprocessing(self, X):
         # 訓練データを基準に標準化（平均、標準偏差で標準化）
         scaler = StandardScaler()
@@ -316,14 +382,12 @@ class SVRs:
 
     # 6:2:2に分割にするため、訓練データのうちの後ろ1/4を交差検証データとする
     # 交差検証データのジェネレーター
-    @classmethod
     def gen_cv(self, y):
         m_train = np.floor(len(y) * 0.75).astype(int)  # このキャストをintにしないと後にハマる
         train_indices = np.arange(m_train)
         test_indices = np.arange(m_train, len(y))
         yield (train_indices, test_indices)
 
-    @classmethod
     def tuning(self, X_norm, y):
         # ハイパーパラメータのチューニング
         params_cnt = 20
@@ -359,7 +423,6 @@ class SVRs:
 
         return gridsearch
 
-    @classmethod
     def do_fit(self, X_norm, y, gridsearch):
         # チューニングしたC,εでフィット
         regr = SVR(C=gridsearch.best_params_["C"], epsilon=gridsearch.best_params_["epsilon"])
