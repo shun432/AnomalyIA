@@ -466,4 +466,3 @@ if __name__ == '__main__':
 
     run = run_classify_for_App()
     run.run_LSTM()
-
