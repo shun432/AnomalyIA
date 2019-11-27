@@ -181,9 +181,9 @@ class LSTMa:
 
         self.model = model
 
-    def dofit(self, data, trend):
+    def dofit(self, data, trend, epoch=10):
         # Learning
-        history = self.model.fit(data, trend, epochs=2, validation_split=0.1)
+        history = self.model.fit(data, trend, epochs=epoch, validation_split=0.1, verbose=0)
         return history
 
     def dopredict(self, data):

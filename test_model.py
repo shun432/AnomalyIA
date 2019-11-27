@@ -2,6 +2,7 @@ import sampledata as sd
 import classify
 
 from matplotlib import pyplot as plt
+import matplotlib.patches as patches
 import numpy as np
 import os
 import time
@@ -403,14 +404,10 @@ class run_classify_for_App:
         # 各時系列で
         for t in range(endtime):
 
-            ap = 0
+            print("time:" + str(t) + "/" + str(endtime - 1))
 
             # それぞれのアプリについて
             for id in range(len(self.app)):
-
-                ap += 1
-                print(ap)
-
 
                 if t > self.timesteps + 1:
 
@@ -419,42 +416,70 @@ class run_classify_for_App:
                     # 最新データからトレンドを予測する
                     predicted = lstm.dopredict(data)
 
+                    # 最新データの予測のみ格納
                     pred[id].append(predicted[-1])
 
                     # 最新までの特徴を学習する
 
-                    history = lstm.dofit(data, np.array(self.app[id].trend[-1 * (self.timesteps+1):-1]).reshape(10, 1))
+                    history = lstm.dofit(data, np.array(self.app[id].trend[-1 * (self.timesteps+1):-1]).reshape(10, 1), epoch=50)
 
                 self.app[id].update(self.trend_rule)
 
             self.trend_rule.update()
 
-        plt.figure()
+
+
+        x = list(range(endtime))
+
+        plt.figure(figsize=(len(x)/10, 5))
         cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
+
+        ax = plt.axes()
         for id in range(len(self.app)):
-            plt.plot(range(0, endtime), self.app[id].trend, color=cycle[id], label="trend", linestyle="dotted")
-            plt.plot(range(12, endtime), pred[id], color=cycle[id], label="pred")
+            plt.plot(x, self.app[id].trend, color=cycle[id], label="trend (app:" + str(id) + ")", linestyle="dotted")
+            plt.plot(x[12:], pred[id], color=cycle[id], label="pred (app:" + str(id) + ")")
+
             # plt.scatter(range(0, endtime), np.array(self.app[id].trend_idx), color=cycle[id])
 
-        plt.legend()
-        plt.savefig("test.png")
-        plt.show()
+        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+        plt.subplots_adjust(right=0.8)
+        plt.savefig("result/AppDATA/PredictTrend.png")
 
         plt.clf()
 
-        x = list(range(endtime))
         width = 0.8 / len(self.trend_rule.w)
+        #トレンドルール毎に
         for i in range(len(self.trend_rule.w)):
+            bottom = np.array(- i * 2.0)
+            # 特徴毎に
             for j in range(len(self.trend_rule.w[i])):
-                bottom = np.array(i * 2.0)
                 plt.bar(x + np.array([width * float(j)] * len(x)), self.trend_rule.w[i][j][:-1],
                         color=cycle[j], align='edge', bottom=bottom, width=width)
+            # plt.scatter(x, [- i * 2.0] * len(x), color=cycle[i], s=5, marker="D", label="trendrule:" + str(i))
+            plt.fill_between(list(range(endtime+1)), [- i * 2.0 + 1] * (len(x)+1), [- (i+1) * 2.0 + 1] * (len(x)+1),
+                             facecolor=cycle[i], alpha=0.2, label="trendrule:" + str(i))
 
+
+        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+        plt.subplots_adjust(right=0.8)
+        plt.savefig("result/AppDATA/TrendRuleW.png")
+
+        plt.clf()
+
+        for i in range(len(self.trend_rule.w)):
+            plt.scatter(x, np.array([0] * len(x)), color=cycle[i], s=15, marker="D",
+                        label="trendrule:" + str(i))
         for id in range(len(self.app)):
-            plt.bar(x, [0.05] * len(x), color="blue", align='edge', bottom=np.array(self.app[id].trend_idx) * 2, width=0.8)
-            plt.plot(x, self.app[id].trend[:], color="black")
+            colorArr = []
+            for i in self.app[id].trend_idx:
+                colorArr.append(cycle[i])
+            plt.scatter(x, np.array([- id] * len(x)), color=cycle[id], s=150, label="app:" + str(id))
+            plt.scatter(x, np.array([- id] * len(x)), color="w", s=70)
+            plt.scatter(x, np.array([- id] * len(x)), color=colorArr, s=15, marker="D", alpha=0.5)
 
-        plt.savefig("test_ruleweight.png")
+        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+        plt.subplots_adjust(right=0.8)
+        plt.savefig("result/AppDATA/ChosenRule.png")
 
         return
 
