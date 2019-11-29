@@ -580,5 +580,5 @@ if __name__ == '__main__':
                [[0.2], [0.2], [0.5], [-0.3], [0.5], [-0.5], [0.3], [0.5], [0.2], [-0.1]],
                [[0.0], [0.0], [0.8], [0.2], [0.2], [0.5], [-0.3], [0.5], [-0.5], [0.3]]]
 
-    run = run_classify_for_App(n=app_num)
+    run = run_classify_for_App(n=app_num, DataType=DataType, first_w=first_w)
     run.run_LSTM()
