@@ -137,7 +137,6 @@ class LSTMa:
     def __init__(self, data_dim, timesteps=10):
         self.timesteps = timesteps
         self.data_dim = data_dim
-        self.offset = 13
 
         self.model = None
 

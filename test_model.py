@@ -2,7 +2,7 @@ import sampledata as sd
 import classify
 
 from matplotlib import pyplot as plt
-import matplotlib.patches as patches
+from matplotlib import colors
 import numpy as np
 import os
 import time
@@ -11,26 +11,15 @@ import time
         モデルを実行する関数を置く場所
 '''
 
-def save_fig(path, loss=False):
+def save_fig(path):
     n = 1
-    if(loss == False):
-        while(True):
-            if(os.path.exists("result/" + path + "/predict" + str(sd.OneDimTimeSeries.noise_type)
-                              +"_"+str(n) + ".png") == False):
-                break
-            else:
-                n += 1
-        plt.savefig("result/" + path + "/predict" + str(sd.OneDimTimeSeries.noise_type)
-                              +"_"+str(n)+".png")
-    else:
-        while (True):
-            if (os.path.exists("result/" + path + "/loss" + str(sd.OneDimTimeSeries.noise_type)
-                               + "_" + str(n) + ".png") == False):
-                break
-            else:
-                n += 1
-        plt.savefig("result/" + path + "/loss" + str(sd.OneDimTimeSeries.noise_type)
-                    + "_" + str(n) + ".png")
+    while True:
+        if not os.path.exists(path + "_" + str(n) + ".png"):
+            break
+        else:
+            n += 1
+    plt.savefig(path + "_" + str(n) + ".png")
+
 
 
 class run_classify_for_OD:
@@ -64,7 +53,7 @@ class run_classify_for_OD:
         plt.plot(x, data)
         plt.scatter(x, pred, marker="o", color="green")
         plt.scatter(x, ano_data, marker=".", color="red")
-        save_fig("OCsvm")
+        save_fig("result/OneDim/OCsvm/predict" + str(sd.OneDimTimeSeries.noise_type))
         plt.show()
 
     def run_knn(self, Threshold = 0.01):
@@ -99,7 +88,7 @@ class run_classify_for_OD:
         plt.plot(x, data)
         plt.scatter(x, pred, marker="o", color="green")
         plt.scatter(x, ano_data, marker=".", color="red")
-        save_fig("knn")
+        save_fig("result/OneDim/knn/predict" + str(sd.OneDimTimeSeries.noise_type))
         plt.show()
 
     def run_LPF(self, Threshold):
@@ -132,7 +121,7 @@ class run_classify_for_OD:
         # plt.plot(x, thLPF_u, linestyle="dashed")
         plt.scatter(x, pred, marker="o", color="green")
         plt.scatter(x, ano_data, marker=".", color="red")
-        save_fig("LPF")
+        save_fig("result/OneDim/LPF/predict" + str(sd.OneDimTimeSeries.noise_type))
         plt.show()
 
     def run_LSTM(self, Threshold):
@@ -171,7 +160,7 @@ class run_classify_for_OD:
         # plt.plot(range(0 + len(raw_data) - 24, len(future_result) + len(raw_data) - 24), future_result, color="orange",
         #          label="future")
         plt.legend()
-        save_fig("lstm")
+        save_fig("result/OneDim/lstm/predict" + str(sd.OneDimTimeSeries.noise_type))
         plt.show()
         plt.close()
 
@@ -183,7 +172,7 @@ class run_classify_for_OD:
         plt.plot(epochs, val_loss, "b", label="Validation loss")
         plt.title("Training and Validation loss")
         plt.legend()
-        save_fig("lstm", loss=True)
+        save_fig("result/OneDim/lstm/loss" + str(sd.OneDimTimeSeries.noise_type))
         plt.close()
 
     def run_AutoEncoder(self, Threshold):
@@ -222,7 +211,7 @@ class run_classify_for_OD:
         # plt.plot(range(0 + len(raw_data) - 24, len(future_result) + len(raw_data) - 24), future_result, color="orange",
         #          label="future")
         plt.legend()
-        save_fig("AutoEncoder")
+        save_fig("result/OneDim/AutoEncoder/predict" + str(sd.OneDimTimeSeries.noise_type))
         plt.show()
         plt.close()
 
@@ -234,7 +223,7 @@ class run_classify_for_OD:
         plt.plot(epochs, val_loss, "b", label="Validation loss")
         plt.title("Training and Validation loss")
         plt.legend()
-        save_fig("AutoEncoder", loss=True)
+        save_fig("result/OneDim/AutoEncoder/loss" + str(sd.OneDimTimeSeries.noise_type))
         plt.close()
 
     def run_SSA(self, s=2):
@@ -262,7 +251,7 @@ class run_classify_for_OD:
         plt.plot(x, sst)
         plt.plot(list(range(len(ano[1]))), np.array(ano[1]) * 150 - 15, color="green")
         plt.scatter(x, ano_data, marker=".", color="red")
-        save_fig("SSA")
+        save_fig("result/OneDim/SSA/predict" + str(sd.OneDimTimeSeries.noise_type))
         plt.show()
 
 
@@ -327,7 +316,7 @@ class run_classify_for_OD:
         plt.plot(x, data)
         plt.scatter(x, predicted, marker="o", color="green")
         plt.scatter(x, ano_data, marker=".", color="red")
-        save_fig("SVR")
+        save_fig("result/OneDim/SVR/predict" + str(sd.OneDimTimeSeries.noise_type))
         plt.show()
 
     def run(self, select):
@@ -351,101 +340,105 @@ class run_classify_for_OD:
 
 class run_classify_for_App:
 
-    def __init__(self, n=5):
+    def __init__(self, n=5, span=100, DataType=None, first_w=None, w_delta=0.05):
 
-        self.timesteps = 10
+        # parameter
+
+        self.span = span
+        self.w_delta = w_delta
+
+        # setup
 
         self.app = []
+        self.prediction = [[]*n]
 
         for i in range(n):
             self.app.append(sd.ApplicationData())
 
         # データを用意してself.appとself.trend_ruleに格納
         for i in range(n):
-            self.prepare_data(self.app[i])
+            self.prepare_data(self.app[i], DataType[i])
 
         self.trend_rule = None
-        self.init_trend()
+        self.init_trend(first_w, self.w_delta)
 
         # for i in range(100):
         #     app.update(self.trend_rule)
         #     self.trend_rule.update()
 
-    def prepare_data(self, app):
+    def prepare_data(self, app, DataType):
 
-        app.addDataType(sd.ScalarNormType(mu=0, sigma=0.05, thread=True), "Norm")
-        app.addDataType(sd.ScalarNormType(mu=0, sigma=0.05, thread=True), "Norm")
-        app.addDataType(sd.ScalarNormType(mu=0, sigma=0.05, thread=True), "Norm")
-        app.addDataType(sd.BinaryType(possibility=0, initval=1), "Bina")
+        if DataType is None:
+            # デフォルトのデータタイプ
+            app.addDataType(sd.ScalarNormType(mu=0, sigma=0.05, thread=True), "Norm")
+            app.addDataType(sd.ScalarNormType(mu=0, sigma=0.05, thread=True), "Norm")
+            app.addDataType(sd.ScalarNormType(mu=0, sigma=0.05, thread=True), "Norm")
+            app.addDataType(sd.BinaryType(possibility=0, initval=0), "Bina")
+        else:
+            for j in DataType:
+                app.addDataType(j["data"], j["name"])
 
-    def init_trend(self):
+    def init_trend(self, first_w, w_delta):
 
-        # データタイプを増やすと横に広げる、縦に広げると並列ルールが増える
-        init_w = [[[0.2], [0.5], [0.2], [-0.1]],
-                  [[0.2], [0.5], [-0.5], [0.3]],
-                  [[0.2], [0.2], [0.5], [-0.3]],
-                  [[0.0], [0.0], [0.8], [0.2]]]
-        # init_w = [[[0.2], [0.5], [0.2], [-0.1]]]
+        w = first_w
 
-        self.trend_rule = sd.TrendRule(init_w, self.app[0].typelength, delta=0.05)
+        if first_w is None:
 
-    def run_OCsvm(self):
+            # デフォルトのルール重み
+            w = [[[0.2], [0.5], [0.2], [-0.1]],
+                 [[0.2], [0.5], [-0.5], [0.3]],
+                 [[0.2], [0.2], [0.5], [-0.3]],
+                 [[0.0], [0.0], [0.8], [0.2]]]
 
-        return
+        self.trend_rule = sd.TrendRule(w, self.app[0].typelength, delta=w_delta)
 
-    def run_LSTM(self):
-        import itertools
+    def savefig_result(self, start_offset=0):
 
-        lstm = classify.LSTMa(self.app[0].typelength)
-
-        pred = [[], [], [], [], []]
-        endtime = 100
-
-        # 各時系列で
-        for t in range(endtime):
-
-            print("time:" + str(t) + "/" + str(endtime - 1))
-
-            # それぞれのアプリについて
-            for id in range(len(self.app)):
-
-                if t > self.timesteps + 1:
-
-                    data = np.array([u[-1 * (self.timesteps+1):-1] for u in self.app[id].featureVector]).T.reshape(10, 4, 1)
-
-                    # 最新データからトレンドを予測する
-                    predicted = lstm.dopredict(data)
-
-                    # 最新データの予測のみ格納
-                    pred[id].append(predicted[-1])
-
-                    # 最新までの特徴を学習する
-
-                    history = lstm.dofit(data, np.array(self.app[id].trend[-1 * (self.timesteps+1):-1]).reshape(10, 1), epoch=50)
-
-                self.app[id].update(self.trend_rule)
-
-            self.trend_rule.update()
-
-
-
-        x = list(range(endtime))
+        x = list(range(self.span))
 
         plt.figure(figsize=(len(x)/10, 5))
-        cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
-        ax = plt.axes()
+        # アプリごとの色
+        if len(self.app) <= 10:
+            cycle_app = plt.rcParams['axes.prop_cycle'].by_key()['color']
+        elif len(self.app) <= 20:
+            cycle_app = plt.cm.get_cmap('tab20')
+        else:
+            cycle_app = list(colors.XKCD_COLORS.items())[:100]
+
         for id in range(len(self.app)):
-            plt.plot(x, self.app[id].trend, color=cycle[id], label="trend (app:" + str(id) + ")", linestyle="dotted")
-            plt.plot(x[12:], pred[id], color=cycle[id], label="pred (app:" + str(id) + ")")
-
-            # plt.scatter(range(0, endtime), np.array(self.app[id].trend_idx), color=cycle[id])
+            plt.plot(x, self.app[id].trend, color=cycle_app[id], label="trend (app:" + str(id) + ")", linestyle="dotted")
+            plt.plot(x[start_offset:], self.prediction[id], color=cycle_app[id], label="pred (app:" + str(id) + ")")
 
         plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         plt.subplots_adjust(right=0.8)
-        plt.savefig("result/AppDATA/PredictTrend.png")
+        save_fig("result/AppDATA/PredictTrend")
 
         plt.clf()
+
+        return
+
+    def savefig_ruleweight(self):
+
+        x = list(range(self.span))
+
+        plt.figure(figsize=(len(x)/10, 5))
+
+        # トレンドルールごとの色
+        if len(self.trend_rule.w) <= 10:
+            cycle_tr = plt.rcParams['axes.prop_cycle'].by_key()['color']
+        elif len(self.trend_rule.w) <= 20:
+            cycle_tr = plt.cm.get_cmap('tab20')
+        else:
+            cycle_tr = list(colors.XKCD_COLORS.items())[:100]
+
+        # 特徴ごとの色
+        if len(self.trend_rule.w[0]) <= 10:
+            cycle_ft = plt.rcParams['axes.prop_cycle'].by_key()['color']
+        elif len(self.trend_rule.w[0]) <= 20:
+            cycle_ft = plt.cm.get_cmap('tab20')
+        else:
+            cycle_ft = list(colors.XKCD_COLORS.items())[:100]
 
         width = 0.8 / len(self.trend_rule.w)
         #トレンドルール毎に
@@ -454,32 +447,102 @@ class run_classify_for_App:
             # 特徴毎に
             for j in range(len(self.trend_rule.w[i])):
                 plt.bar(x + np.array([width * float(j)] * len(x)), self.trend_rule.w[i][j][:-1],
-                        color=cycle[j], align='edge', bottom=bottom, width=width)
-            # plt.scatter(x, [- i * 2.0] * len(x), color=cycle[i], s=5, marker="D", label="trendrule:" + str(i))
-            plt.fill_between(list(range(endtime+1)), [- i * 2.0 + 1] * (len(x)+1), [- (i+1) * 2.0 + 1] * (len(x)+1),
-                             facecolor=cycle[i], alpha=0.2, label="trendrule:" + str(i))
-
+                        color=cycle_ft[j], align='edge', bottom=bottom, width=width)
+            plt.fill_between(list(range(self.span+1)), [- i * 2.0 + 1] * (len(x)+1), [- (i+1) * 2.0 + 1] * (len(x)+1),
+                             facecolor=cycle_tr[i], alpha=0.2, label="trendrule:" + str(i))
 
         plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         plt.subplots_adjust(right=0.8)
-        plt.savefig("result/AppDATA/TrendRuleW.png")
+        save_fig("result/AppDATA/TrendRuleW")
 
         plt.clf()
 
+        return
+
+    def savefig_chosenrule(self):
+
+        x = list(range(self.span))
+
+        plt.figure(figsize=(len(x)/10, 5))
+
+        # アプリごとの色
+        if len(self.app) <= 10:
+            cycle_app = plt.rcParams['axes.prop_cycle'].by_key()['color']
+        elif len(self.app) <= 20:
+            cycle_app = plt.cm.get_cmap('tab20')
+        else:
+            cycle_app = list(colors.XKCD_COLORS.items())[:100]
+
+        # トレンドルールごとの色
+        if len(self.trend_rule.w) <= 10:
+            cycle_tr = plt.rcParams['axes.prop_cycle'].by_key()['color']
+        elif len(self.trend_rule.w) <= 20:
+            cycle_tr = plt.cm.get_cmap('tab20')
+        else:
+            cycle_tr = list(colors.XKCD_COLORS.items())[:100]
+
+        # 凡例表示用
         for i in range(len(self.trend_rule.w)):
-            plt.scatter(x, np.array([0] * len(x)), color=cycle[i], s=15, marker="D",
+            plt.scatter(x, np.array([0] * len(x)), color=cycle_tr[i], s=1, marker="D",
                         label="trendrule:" + str(i))
+
         for id in range(len(self.app)):
             colorArr = []
             for i in self.app[id].trend_idx:
-                colorArr.append(cycle[i])
-            plt.scatter(x, np.array([- id] * len(x)), color=cycle[id], s=150, label="app:" + str(id))
+                colorArr.append(cycle_tr[i])
+            plt.scatter(x, np.array([- id] * len(x)), color=cycle_app[id], s=150, label="app:" + str(id))
             plt.scatter(x, np.array([- id] * len(x)), color="w", s=70)
             plt.scatter(x, np.array([- id] * len(x)), color=colorArr, s=15, marker="D", alpha=0.5)
 
         plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         plt.subplots_adjust(right=0.8)
-        plt.savefig("result/AppDATA/ChosenRule.png")
+        save_fig("result/AppDATA/ChosenRule")
+
+        plt.clf()
+
+        return
+
+    def run_OCsvm(self):
+
+        return
+
+    def run_LSTM(self, reference_steps=10):
+
+        rs = reference_steps
+        tl = self.app[0].typelength
+
+        lstm = classify.LSTMa(tl, rs)
+
+        # 各時系列で
+        for t in range(self.span):
+
+            print("time:" + str(t) + "/" + str(self.span - 1))
+
+            # それぞれのアプリについて
+            for id in range(len(self.app)):
+
+                if t > rs + 1:
+
+                    data = np.array([u[-1 * (rs+1):-1] for u in self.app[id].featureVector]).T.reshape(rs, tl, 1)
+
+                    # 最新データからトレンドを予測する
+                    pred = lstm.dopredict(data)
+
+                    # 最新データの予測のみ格納
+                    self.prediction[id].append(pred[-1])
+
+                    # 最新までの特徴を学習する
+
+                    history = lstm.dofit(data, np.array(self.app[id].trend[-1 * (rs+1):-1]).reshape(rs, 1), epoch=50)
+
+                self.app[id].update(self.trend_rule)
+
+            self.trend_rule.update()
+
+        # データを保存する
+        self.savefig_result(start_offset=rs+2)
+        self.savefig_ruleweight()
+        self.savefig_chosenrule()
 
         return
 
@@ -489,5 +552,33 @@ if __name__ == '__main__':
     # runOD = run_classify_for_OD()
     # runOD.run("ae")
 
-    run = run_classify_for_App()
+    app_num = 5
+
+    first_bin = [[0, 0, 0, 1],
+                 [0, 0, 1, 0],
+                 [0, 1, 0, 0],
+                 [1, 0, 0, 0],
+                 [0, 0, 1, 1]]
+
+    DataType = []
+    for i in range(app_num):
+        DataType.append(
+            [dict(name="data1", data=sd.ScalarNormType(mu=0, sigma=0.05, thread=True)),
+             dict(name="data2", data=sd.ScalarNormType(mu=0, sigma=0.05, thread=True)),
+             dict(name="data3", data=sd.ScalarNormType(mu=0, sigma=0.05, thread=True)),
+             dict(name="data4", data=sd.ScalarNormType(mu=0, sigma=0.05, thread=True)),
+             dict(name="data5", data=sd.ScalarNormType(mu=0, sigma=0.05, thread=True)),
+             dict(name="data6", data=sd.ScalarNormType(mu=0, sigma=0.05, thread=True)),
+             dict(name="genre1", data=sd.BinaryType(possibility=0, initval=first_bin[i][0])),
+             dict(name="genre2", data=sd.BinaryType(possibility=0, initval=first_bin[i][1])),
+             dict(name="genre3", data=sd.BinaryType(possibility=0, initval=first_bin[i][2])),
+             dict(name="genre4", data=sd.BinaryType(possibility=0, initval=first_bin[i][3]))])
+
+    # データタイプを増やすと横に広げる、縦に広げると並列ルールが増える      w[ルール][特徴][時系列]
+    first_w = [[[0.2], [0.5], [0.2], [-0.1], [0.0], [0.8], [0.2], [0.2], [0.5], [-0.3]],
+               [[0.2], [0.5], [-0.5], [0.3], [0.5], [0.2], [-0.1], [0.0], [0.8], [0.2]],
+               [[0.2], [0.2], [0.5], [-0.3], [0.5], [-0.5], [0.3], [0.5], [0.2], [-0.1]],
+               [[0.0], [0.0], [0.8], [0.2], [0.2], [0.5], [-0.3], [0.5], [-0.5], [0.3]]]
+
+    run = run_classify_for_App(n=app_num)
     run.run_LSTM()
