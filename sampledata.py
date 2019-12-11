@@ -132,8 +132,8 @@ class ApplicationData:
         self.DataName = []
         self.DataType = []
         self.featureVector = []         # featureVector[特徴][時系列]
-        self.trend = []
-        self.trend_idx = []
+        self.trend = []         # 流行度のリスト
+        self.trend_idx = []         # 選ばれたトレンドルールのリスト(0 ~ n)
 
     # 特徴ベクトルの基底を追加（収益、DL数、カテゴリーなど）
     def addDataType(self, type, name="NoNamed"):
