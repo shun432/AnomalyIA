@@ -377,8 +377,8 @@ class run_classify_for_App:
             app.addDataType(sd.ScalarNormType(mu=0, sigma=0.05, thread=True), "Norm")
             app.addDataType(sd.BinaryType(possibility=0, initval=0), "Bina")
         else:
-            for j in DataType:
-                app.addDataType(j["data"], j["name"])
+            for feature in DataType:
+                app.addDataType(feature["data"], feature["name"])
 
     def init_trend(self, first_w, w_delta):
 
