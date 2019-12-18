@@ -134,35 +134,28 @@ class LSTMa:
     http://cedro3.com/ai/keras-lstm/
     '''
 
-    def __init__(self, data_dim, timesteps=10):
-        self.timesteps = timesteps
-        self.data_dim = data_dim
+    def __init__(self, data_dim, timesteps=10, epochs=10):
+
+        self.reference_steps = timesteps
+        self.data_dimension = data_dim
+        self.epochs = epochs
 
         self.model = None
 
         #datashapeを使ってモデルを作っておく
         self.modeling()
 
-    # def preprocessing(self, raw_data, label):
-    #     # read data
-    #     raw_data = raw_data / self.offset
-    #
-    #     # Make input data
-    #     x, y = [], []
-    #     length = self.reference_len
-    #     for i in range(len(raw_data) - length):
-    #         x.append(raw_data[i : i+length])
-    #         y.append(raw_data[i + length])
-    #     data = np.array(x).reshape(len(x), length, 1)
-    #     target = np.array(y).reshape(len(y), 1)
-    #
-    #     #labelの数の帳尻合わせ。length個のデータを参照、length番目のデータのラベルを予想
-    #     for j in range(length-1):
-    #         label = np.delete(label, 0)
-    #     label = np.delete(label, len(label)-1)
-    #     label = np.array(label).reshape(len(label), 1)
-    #
-    #     return data, target, label
+    # LSTMに入力するreference_steps個のデータだけを参照するようにdataとtargetを整える
+    def preprocessing(self, data, target=None):
+
+        # 最後からreference_steps個を保存
+        data = np.array([u[- self.reference_steps:] for u in data]).T.reshape(self.reference_steps, self.data_dimension, 1)
+
+        # 最後からreference_steps個を保存
+        if target is not None:
+            target = np.array(target[- self.reference_steps:]).reshape(self.reference_steps, 1)
+
+        return data, target
 
     def modeling(self):
         # Model building
@@ -180,9 +173,11 @@ class LSTMa:
 
         self.model = model
 
-    def dofit(self, data, trend, epoch=10):
+    def dofit(self, data, trend, epochs=None):
+        if epochs is None:
+            epochs = self.epochs
         # Learning
-        history = self.model.fit(data, trend, epochs=epoch, validation_split=0.1, verbose=0)
+        history = self.model.fit(data, trend, epochs=epochs, validation_split=0.1, verbose=0)
         return history
 
     def dopredict(self, data):

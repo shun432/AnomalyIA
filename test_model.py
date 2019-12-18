@@ -519,7 +519,7 @@ class run_classify_for_App:
         rs = reference_steps
         tl = self.app[0].typelength
 
-        lstm = classify.LSTMa(tl, rs)
+        lstm = classify.LSTMa(tl, rs, epochs=2)
 
         # 各時系列で
         for t in range(self.span):
@@ -529,9 +529,11 @@ class run_classify_for_App:
             # それぞれのアプリについて
             for app_id in range(len(self.app)):
 
-                if t > rs + 1:
+                data = None
 
-                    data = np.array([u[-1 * (rs+1):-1] for u in self.app[app_id].featureVector]).T.reshape(rs, tl, 1)
+                if t >= rs:
+
+                    data = np.array([u[-rs:] for u in self.app[app_id].featureVector]).T.reshape(rs, tl, 1)
 
                     # 最新データからトレンドを予測する
                     pred = lstm.dopredict(data)
@@ -539,9 +541,9 @@ class run_classify_for_App:
                     # 最新データの予測のみ格納
                     self.prediction[app_id].append(pred[-1][0])
 
-                    # 最新までの特徴を学習する
-
-                    history = lstm.dofit(data, np.array(self.app[app_id].trend[-1 * (rs+1):-1]).reshape(rs, 1), epoch=50)
+                if t >= rs + 1:
+                    # 前シーズンまでの特徴を学習する
+                    history = lstm.dofit(data, np.array(self.app[app_id].trend[-(rs+1):-1]).reshape(rs, 1))
 
                 self.app[app_id].update(self.trend_rule)
 
