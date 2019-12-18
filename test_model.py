@@ -353,6 +353,8 @@ class run_classify_for_App:
 
         self.app = []
         self.prediction = [[] for i in range(n)]
+        self.learn_loss = [[] for i in range(n)]
+        self.eval_loss = [[] for i in range(n)]
 
         for i in range(n):
             self.app.append(sd.ApplicationData())
@@ -394,7 +396,7 @@ class run_classify_for_App:
 
         self.trend_rule = sd.TrendRule(w, self.app[0].typelength, delta=w_delta)
 
-    def savefig_result(self, start_offset=0):
+    def savefig_result(self, name, start_offset=0):
 
         x = list(range(self.span))
 
@@ -412,15 +414,19 @@ class run_classify_for_App:
             plt.plot(x, self.app[id].trend, color=cycle_app[id], label="trend (app:" + str(id) + ")", linestyle="dotted")
             plt.plot(x[start_offset:], self.prediction[id], color=cycle_app[id], label="pred (app:" + str(id) + ")")
 
+        for i, app in enumerate(self.app):
+            plt.scatter(x[start_offset+1:], self.learn_loss[i], color=cycle_app[i], label="learn loss (app:" + str(i) + ")")
+            plt.scatter(x[start_offset+1:], self.eval_loss[i], color=cycle_app[i], label="evalu loss (app:" + str(i) + ")")
+
         plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         plt.subplots_adjust(right=0.8)
-        save_fig("result/AppDATA/PredictTrend")
+        save_fig(name)
 
         plt.clf()
 
         return
 
-    def savefig_ruleweight(self):
+    def savefig_ruleweight(self, name):
 
         x = list(range(self.span))
 
@@ -460,14 +466,14 @@ class run_classify_for_App:
 
         plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         plt.subplots_adjust(right=0.8)
-        save_fig("result/AppDATA/TrendRuleW")
+        save_fig(name)
 
 
         plt.clf()
 
         return
 
-    def savefig_chosenrule(self):
+    def savefig_chosenrule(self, name):
 
         x = list(range(self.span))
 
@@ -504,7 +510,7 @@ class run_classify_for_App:
 
         plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         plt.subplots_adjust(right=0.8)
-        save_fig("result/AppDATA/ChosenRule")
+        save_fig(name)
 
         plt.clf()
 
@@ -524,7 +530,7 @@ class run_classify_for_App:
         # 各時系列で
         for t in range(self.span):
 
-            print("time:" + str(t) + "/" + str(self.span - 1))
+            # print("time:" + str(t) + "/" + str(self.span - 1))
 
             # それぞれのアプリについて
             for app_id in range(len(self.app)):
@@ -545,16 +551,22 @@ class run_classify_for_App:
                     # 前シーズンまでの特徴を学習する
                     history = lstm.dofit(data, np.array(self.app[app_id].trend[-(rs+1):-1]).reshape(rs, 1))
 
+                    self.learn_loss[app_id].append(history.history["loss"][-1])
+                    self.eval_loss[app_id].append(history.history["val_loss"][-1])
+
                 self.app[app_id].update(self.trend_rule)
 
             self.trend_rule.update()
 
         # データを保存する
-        self.savefig_result(start_offset=rs+2)
-        self.savefig_ruleweight()
-        self.savefig_chosenrule()
+        # self.savefig_result("result/AppDATA/sevenR_PredictTrend", start_offset=rs)
+        # self.savefig_ruleweight("result/AppDATA/oneR_TrendRuleW")
+        # self.savefig_chosenrule("result/AppDATA/oneR_ChosenRule")
 
-        return
+        ave_learn_loss = [sum(u) / len(u) for u in self.learn_loss]
+        ave_eval_loss = [sum(u) / len(u) for u in self.eval_loss]
+
+        return ave_learn_loss, ave_eval_loss
 
 
 if __name__ == '__main__':
@@ -585,13 +597,92 @@ if __name__ == '__main__':
              dict(name="genre4", data=sd.BinaryType(possibility=0, initval=first_bin[i][3]))])
 
     # データタイプを増やすと横に広げる、縦に広げると並列ルールが増える      w[ルール][特徴][時系列]
-    first_w = [[[0.2], [0.5], [0.2], [-0.1], [0.0], [0.8], [0.2], [0.2], [0.5], [-0.3]],
-               [[0.2], [0.5], [-0.5], [0.3], [0.5], [0.2], [-0.1], [0.0], [0.8], [0.2]],
-               [[0.2], [0.2], [0.5], [-0.3], [0.5], [-0.5], [0.3], [0.5], [0.2], [-0.1]],
-               [[0.8], [-0.5], [0.3], [0.2], [0.8], [0.8], [0.8], [0.3], [0.1], [0.3]],
-               [[0.5], [0.2], [0.1], [0.8], [0.1], [-0.2], [0.2], [-0.9], [0.4], [-0.8]],
-               [[0.8], [0.8], [0.1], [0.1], [-0.5], [0.1], [0.5], [0.6], [-0.5], [0.9]],
-               [[0.0], [0.0], [0.8], [0.2], [0.2], [0.5], [-0.3], [0.5], [-0.5], [0.3]]]
+    # first_w = [[[0.2], [0.5], [0.2], [-0.1], [0.0], [0.8], [0.2], [0.2], [0.5], [-0.3]],
+    #            [[0.2], [0.5], [-0.5], [0.3], [0.5], [0.2], [-0.1], [0.0], [0.8], [0.2]],
+    #            [[0.2], [0.2], [0.5], [-0.3], [0.5], [-0.5], [0.3], [0.5], [0.2], [-0.1]],
+    #            [[0.8], [-0.5], [0.3], [0.2], [0.8], [0.8], [0.8], [0.3], [0.1], [0.3]],
+    #            [[0.5], [0.2], [0.1], [0.8], [0.1], [-0.2], [0.2], [-0.9], [0.4], [-0.8]],
+    #            [[0.8], [0.8], [0.1], [0.1], [-0.5], [0.1], [0.5], [0.6], [-0.5], [0.9]],
+    #            [[0.0], [0.0], [0.8], [0.2], [0.2], [0.5], [-0.3], [0.5], [-0.5], [0.3]]]
 
-    run = run_classify_for_App(n=app_num, DataType=DataType, first_w=first_w)
-    run.run_LSTM()
+    # run = run_classify_for_App(n=app_num, DataType=DataType, first_w=first_w)
+    # run.run_LSTM()
+
+    # first_w = [[[0.2], [0.5], [0.2], [-0.1], [0.0], [0.8], [0.2], [0.2], [0.5], [-0.3]]]
+
+
+    ave_learn = []
+    ave_eval = []
+
+    for i in range(200):
+
+        first_w = [[[0.2], [0.5], [0.2], [-0.1], [0.0], [0.8], [0.2], [0.2], [0.5], [-0.3]]]
+
+        run = run_classify_for_App(n=app_num, DataType=DataType, first_w=first_w)
+        ave_learn_loss, ave_eval_loss = run.run_LSTM()
+
+        ave_learn.append(ave_learn_loss)
+        ave_eval.append(ave_eval_loss)
+
+        print("one" + str(i) + ":")
+        print(ave_learn_loss)
+        print(ave_eval_loss)
+        print("")
+
+    ave_l = 0
+    ave_e = 0
+
+    for i in range(5):
+        for j in range(200):
+             ave_l += ave_learn[j][i] / 1000
+             ave_e += ave_eval[j][i] / 1000
+
+    s = "learn:" + str(ave_l) + ", eval:" + str(ave_e)
+
+    print("----------")
+    print(s)
+
+    with open("result/AppDATA/oneR.txt", mode='w') as f:
+        f.write(s)
+
+       #########################################################################
+
+    ave_learn = []
+    ave_eval = []
+
+    for i in range(200):
+
+        first_w = [[[0.2], [0.5], [0.2], [-0.1], [0.0], [0.8], [0.2], [0.2], [0.5], [-0.3]],
+                   [[0.2], [0.5], [-0.5], [0.3], [0.5], [0.2], [-0.1], [0.0], [0.8], [0.2]],
+                   [[0.2], [0.2], [0.5], [-0.3], [0.5], [-0.5], [0.3], [0.5], [0.2], [-0.1]],
+                   [[0.8], [-0.5], [0.3], [0.2], [0.8], [0.8], [0.8], [0.3], [0.1], [0.3]],
+                   [[0.5], [0.2], [0.1], [0.8], [0.1], [-0.2], [0.2], [-0.9], [0.4], [-0.8]],
+                   [[0.8], [0.8], [0.1], [0.1], [-0.5], [0.1], [0.5], [0.6], [-0.5], [0.9]],
+                   [[0.0], [0.0], [0.8], [0.2], [0.2], [0.5], [-0.3], [0.5], [-0.5], [0.3]]]
+
+        run = run_classify_for_App(n=app_num, DataType=DataType, first_w=first_w)
+        ave_learn_loss, ave_eval_loss = run.run_LSTM()
+
+        ave_learn.append(ave_learn_loss)
+        ave_eval.append(ave_eval_loss)
+
+        print("seven" + str(i) + ":")
+        print(ave_learn_loss)
+        print(ave_eval_loss)
+        print("")
+
+    ave_l = 0
+    ave_e = 0
+
+    for i in range(5):
+        for j in range(200):
+             ave_l += ave_learn[j][i] / 1000
+             ave_e += ave_eval[j][i] / 1000
+
+    s = "learn:" + str(ave_l) + ", eval:" + str(ave_e)
+
+    print("----------")
+    print(s)
+
+    with open("result/AppDATA/sevenR.txt", mode='w') as f:
+        f.write(s)
