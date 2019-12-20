@@ -415,8 +415,8 @@ class run_classify_for_App:
             plt.plot(x[start_offset:], self.prediction[id], color=cycle_app[id], label="pred (app:" + str(id) + ")")
 
         for i, app in enumerate(self.app):
-            plt.scatter(x[start_offset+1:], self.learn_loss[i], color=cycle_app[i], label="learn loss (app:" + str(i) + ")")
-            plt.scatter(x[start_offset+1:], self.eval_loss[i], color=cycle_app[i], label="evalu loss (app:" + str(i) + ")")
+            plt.scatter(x[start_offset+1:], self.learn_loss[i], color=cycle_app[i], alpha=0.3, label="learn loss (app:" + str(i) + ")")
+            plt.scatter(x[start_offset+1:], self.eval_loss[i], color=cycle_app[i], alpha=0.3, marker="X", label="evalu loss (app:" + str(i) + ")")
 
         plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         plt.subplots_adjust(right=0.8)
@@ -559,9 +559,9 @@ class run_classify_for_App:
             self.trend_rule.update()
 
         # データを保存する
-        # self.savefig_result("result/AppDATA/sevenR_PredictTrend", start_offset=rs)
-        # self.savefig_ruleweight("result/AppDATA/oneR_TrendRuleW")
-        # self.savefig_chosenrule("result/AppDATA/oneR_ChosenRule")
+        # self.savefig_result("result/AppDATA/PredictTrend", start_offset=rs)
+        # self.savefig_ruleweight("result/AppDATA/TrendRuleW")
+        # self.savefig_chosenrule("result/AppDATA/ChosenRule")
 
         ave_learn_loss = [sum(u) / len(u) for u in self.learn_loss]
         ave_eval_loss = [sum(u) / len(u) for u in self.eval_loss]
@@ -611,10 +611,12 @@ if __name__ == '__main__':
     # first_w = [[[0.2], [0.5], [0.2], [-0.1], [0.0], [0.8], [0.2], [0.2], [0.5], [-0.3]]]
 
 
+    num = 200
+
     ave_learn = []
     ave_eval = []
 
-    for i in range(200):
+    for i in range(num):
 
         first_w = [[[0.2], [0.5], [0.2], [-0.1], [0.0], [0.8], [0.2], [0.2], [0.5], [-0.3]]]
 
@@ -629,11 +631,13 @@ if __name__ == '__main__':
         print(ave_eval_loss)
         print("")
 
+        del run
+
     ave_l = 0
     ave_e = 0
 
     for i in range(5):
-        for j in range(200):
+        for j in range(num):
              ave_l += ave_learn[j][i] / 1000
              ave_e += ave_eval[j][i] / 1000
 
@@ -645,12 +649,14 @@ if __name__ == '__main__':
     with open("result/AppDATA/oneR.txt", mode='w') as f:
         f.write(s)
 
-       #########################################################################
+
+    #########################################################################
+
 
     ave_learn = []
     ave_eval = []
 
-    for i in range(200):
+    for i in range(num):
 
         first_w = [[[0.2], [0.5], [0.2], [-0.1], [0.0], [0.8], [0.2], [0.2], [0.5], [-0.3]],
                    [[0.2], [0.5], [-0.5], [0.3], [0.5], [0.2], [-0.1], [0.0], [0.8], [0.2]],
@@ -671,11 +677,14 @@ if __name__ == '__main__':
         print(ave_eval_loss)
         print("")
 
+        del run
+
+
     ave_l = 0
     ave_e = 0
 
     for i in range(5):
-        for j in range(200):
+        for j in range(num):
              ave_l += ave_learn[j][i] / 1000
              ave_e += ave_eval[j][i] / 1000
 
