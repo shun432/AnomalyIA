@@ -4,30 +4,22 @@ import sampledata as sd
 import classify
 import augment
 import analysis
-import Flist
+from figure import figure
+import random
 
 
+# データを保存するクラス
+class DataStore:
 
-class CImodel:
-
-
-    def __init__(self, cfg, classifier):
-
-
-
-        ############ parameter ############
+    def __init__(self, cfg):
 
         self.app_num = cfg.APP_NUM
 
+
+        ############ data ############
+
         self.apps = []
         self.trend_rule = None
-        self.prediction = [[] for i in range(self.app_num)]
-        self.history = [[] for i in range(self.app_num)]
-
-        self.classifier = classifier
-        self.rs = classifier.reference_steps
-        self.dd = classifier.data_dimension
-
 
 
         ############ setup ############
@@ -57,43 +49,68 @@ class CImodel:
         self.trend_rule = sd.TrendRule(cfg.FIRST_W, cfg.TYPE_LENGTH, delta=cfg.SHIFT_TREND_RULE)
 
 
+# CIモデル
+class CImodel:
+
+
+    def __init__(self, cfg, classifier):
+
+
+        ############ parameter ############
+
+        self.app_num = cfg.APP_NUM
+
+        self.classifier = classifier
+        self.rs = classifier.reference_steps
+        self.dd = classifier.data_dimension
+
+
+        self.prediction = [[] for i in range(self.app_num)]
+        self.history = [[] for i in range(self.app_num)]
+
+        self.prediction_est_rule = [[] for i in range(self.app_num)]
+        self.Estimated_rules = []
+
+
     # CIMの1シーズン分を実行
-    def run(self, season):
+    def run(self, apps, season):
 
-        # 各アプリについてトレンド予測（分類）を試みる
+        # 各アプリについてトレンド予測する
         if season >= self.rs:
-            self.run_classify(season)
+            self.classify_predict(apps)
 
-        # 前シーズン行った予測に対して評価し、トレンド予測が上手くいったかを返す
+        # 前シーズンの予測の評価・分析
         if season >= self.rs + 1:
 
-            self.learn_classify()
-            self.evaluate_classify()
+            # 分類器の学習
+            self.classify_learn(apps)
 
+            # 前シーズンの予測評価、上手くいかなかったアプリを返す
+            predict_failure_apps, failed_idx = self.classify_evaluate_previous(apps, cfg.EVALUATE_THRESHOLD_PRED_FAIL)
+            print("LSTMの予測失敗アプリ数 :" + str(len(predict_failure_apps)))
 
+            # トレンド予測が上手くいかなかったアプリのデータオーグメントをする（仮）
+            augmented_apps = predict_failure_apps
 
-        # for app in pred_failures:
-            ## トレンド予測が上手くいかなかったアプリのデータオーグメントをする
+            # トレンド予測が上手くいかなかったアプリの分析・分析結果から予測
+            self.analyse_failure(augmented_apps, failed_idx, apps)
 
-        # for app in augmented:
-            ## 集まったアプリをデータ分析（短期的で過学習な分析）（クラスタ？主成分？NN？）
-
-        ## 分析結果から新トレンドルール群を予測
-
-        return      ## 新トレンドルール群を返す
+            if cfg.SHOW_MODEL_DETAIL:
+                print("ルール数：" + str(len(self.Estimated_rules)))
 
 
     # 分類器で流行予測する
-    def run_classify(self, season):
+    def classify_predict(self, apps):
 
-        for i, app in enumerate(self.apps):
+        for i, app in enumerate(apps):
 
             # 分類に前処理が必要であれば実行する
             try:
                 # 今シーズンから過去10個分を切り出し
-                data, _ = self.classifier.preprocessing(app.featureVector)
+                data, _ = self.classifier.preprocessing(app.featureVector[:])
             except:
                 data = app.featureVector
+                print("except is called in classify_predict()")
 
             # 最新データからトレンドを予測する
             pred = self.classifier.dopredict(data)
@@ -103,29 +120,227 @@ class CImodel:
 
 
     # 分類器の学習をする
-    def learn_classify(self):
+    def classify_learn(self, apps):
 
-        for i, app in enumerate(self.apps):
+        for i, app in enumerate(apps):
 
             # 分類に前処理が必要であれば実行する
             try:
                 # 前シーズンから過去10個分を切り出し
-                data, target = self.classifier.preprocessing(app.featureVector[:-1], app.trend[:-1])
+                data, target = self.classifier.preprocessing([u[:-1] for u in app.featureVector[:]], app.trend[:-1])
             except:
                 data, target = app.featureVector[:-1], app.trend[:-1]
+                print("except is called in classify_learn()")
 
             # 前シーズンまでのトレンド結果をターゲットにして学習する
             self.history[i].append(self.classifier.dofit(data, target))
 
 
     # 前シーズンの予測結果を振り返る
-    def evaluate_classify(self):
+    def classify_evaluate_previous(self, apps, Threshold):
+
+        predict_failure_apps = []
+        idx = []
+
+        for i, app in enumerate(apps):
+
+            # 前シーズンのアプリトレンド値と予測結果を比べる
+            if abs(app.trend[-2] - self.prediction[i][-2]) > Threshold:
+                predict_failure_apps.append(app)
+                idx.append(i)
+
+        return predict_failure_apps, idx
 
 
-        return
+    # 予測の失敗を分析する（分析関数の集合）
+    def analyse_failure(self, failed_apps, failed_idx, apps):
+
+        # 現存する推定ルールの見直し
+        self.check_existing_rule(failed_apps)
+
+        # 新ルールの捕捉を試みる
+        if self.capture_new_rule(failed_apps, apps) and cfg.SHOW_MODEL_DETAIL:
+            print("新ルールを追加")
+        elif cfg.SHOW_MODEL_DETAIL:
+            print("ルールの追加はありませんでした")
+
+        if len(self.Estimated_rules) > 0:
+
+            # 各アプリに対する新旧ルールを評価し最適ルールを抽出する
+            optimal_rule = self.counseling(failed_apps)
+
+            # 推定ルールを使って流行予測
+            self.predict_with_est_rule(failed_apps, failed_idx, apps, optimal_rule)
+
+        else:
+            for i, app in enumerate(apps):
+                self.prediction_est_rule[i].append(self.prediction[i][-1])
 
 
+    # 既存の推定ルールを見直す
+    def check_existing_rule(self, pred_fail_apps):
 
+        for rule_id, estimated_rule in enumerate(self.Estimated_rules):
+
+            if estimated_rule["status"] is not "new":
+
+                num = 0
+                for app in pred_fail_apps:
+
+                    # 分析に前処理が必要であれば実行する
+                    try:
+                        # 前シーズンから過去10個分を切り出し
+                        data, _ = estimated_rule["rule"].preprocessing([u[-2] for u in app.featureVector[:]])
+                    except:
+                        data = app.featureVector[-2]
+                        print("except is called in check_existing_rule()")
+
+                    # 既存のルールを前シーズンのデータで予測して評価する
+                    evaluate = abs(estimated_rule["rule"].dopredict(data) - app.trend[-2])[0][0]
+
+                    # このルールによるロスが閾値以上のアプリ数
+                    if evaluate >= cfg.EVALUATE_THRESHOLD_DELETE_RULE:
+                        num += 1
+
+                # 不要なルールは削除
+                if num == 0:
+
+                    if estimated_rule["status"] is "disappointed":
+                        self.Estimated_rules.remove(estimated_rule)
+                        if cfg.SHOW_MODEL_DETAIL:
+                            print("消去したルール:" + str(rule_id))
+
+                    elif estimated_rule["status"] is "":
+                        estimated_rule["status"] = "disappointed"
+                        if cfg.SHOW_MODEL_DETAIL:
+                            print("不使用のルール:" + str(rule_id))
+
+                elif estimated_rule["status"] is "disappointed":
+                    estimated_rule["status"] = ""
+
+            if estimated_rule["status"] is "new":
+                estimated_rule["status"] = ""
+
+
+    # 新しくルールの捕捉を試みる
+    def capture_new_rule(self, pred_fail_apps, apps):
+
+        # 新たなルール捕捉器を用意
+        analyser = analysis.NeuralNetwork(cfg.TYPE_LENGTH, epochs=cfg.NN_EPOCHS)
+
+        # アプリをランダムに数個選ぶ (cfg.SAMPLING個)
+        sample_apps = random.sample(pred_fail_apps, len(pred_fail_apps))[:cfg.SAMPLING]
+
+        # サンプルされたアプリを学習させる
+        for app in sample_apps:
+
+            # 分析に前処理が必要であれば実行する
+            try:
+                # 前シーズンから過去10個分を切り出し
+                data, target = analyser.preprocessing([u[-2] for u in app.featureVector[:]], app.trend[-2])
+            except:
+                data, target = app.featureVector[-2], app.trend[-2]
+                print("except is called in capture_new_rule1()")
+
+            analyser.dofit(data, target)
+
+        num = 0
+        # 学習結果を他全てのアプリ（予測に失敗していないアプリを含む）で試す
+        for app in apps:
+
+            # 新ルール生成に用いたサンプルアプリ以外にフォーカス
+            if not any([app is sample_app for sample_app in sample_apps]):
+
+                # 分析に前処理が必要であれば実行する
+                try:
+                    # 前シーズンから過去10個分を切り出し
+                    data, _ = analyser.preprocessing([u[-2] for u in app.featureVector[:]])
+                except:
+                    data = app.featureVector[-2]
+                    print("except is called in capture_new_rule2()")
+
+                evaluate = abs(analyser.dopredict(data) - app.trend[-2])[0][0]
+
+                # if cfg.SHOW_MODEL_DETAIL:
+                #     print("evaluate analyser :" + str(evaluate))
+
+                # このルールによるロスが閾値未満のアプリ数
+                if evaluate < cfg.EVALUATE_THRESHOLD_ADD_RULE:
+                    num += 1
+
+        # いくつかの他アプリでもルールが成り立ち、且つ他全てのアプリと成り立たつ訳でなければ新ルールとして登録
+        if cfg.THRESHOLD_APPNUM < num < self.app_num - cfg.SAMPLING:
+            self.Estimated_rules.append({"status": "new", "rule": analyser})
+            return True
+        else:
+            return False
+
+
+    # 全ての分析器を前シーズンで評価し各アプリの最適ルールを抽出
+    def counseling(self, pred_fail_apps):
+
+        optimal_rule = []
+
+        for app in pred_fail_apps:
+
+            min_loss = None
+            optimal_rule.append(None)
+
+            for rule_id, estimated_rule in enumerate(self.Estimated_rules):
+
+                # 分析に前処理が必要であれば実行する
+                try:
+                    # 前シーズンから過去10個分を切り出し
+                    data, _ = estimated_rule["rule"].preprocessing([u[-2] for u in app.featureVector[:]])
+                except:
+                    data = app.featureVector[-2]
+                    print("except is called in capture_new_rule2()")
+
+                evaluate = abs(estimated_rule["rule"].dopredict(data) - app.trend[-2])[0][0]
+
+                # 最小ロスをそのアプリの最適ルールとして保存
+                if rule_id == 0:
+                    min_loss = evaluate
+                    optimal_rule[-1] = rule_id
+                elif evaluate < min_loss:
+                    min_loss = evaluate
+                    optimal_rule[-1] = rule_id
+
+        return optimal_rule
+
+
+    # 最適ルールで各アプリを予測する
+    def predict_with_est_rule(self, pred_fail_apps, failed_idx, apps, optimal_rule):
+
+        for i, app in enumerate(apps):
+
+            if any([app is f_app for f_app in pred_fail_apps]):
+
+                # 分析に前処理が必要であれば実行する
+                try:
+                    # 前シーズンから過去10個分を切り出し
+                    data, _ = self.Estimated_rules[optimal_rule[failed_idx.index(i)]]["rule"].preprocessing([u[-1] for u in app.featureVector[:]])
+                except:
+                    data = app.featureVector[-1]
+                    print("except is called in capture_new_rule2()")
+
+                # 予測失敗アプリのprediction_est_ruleに分析器の予測を保存
+                self.prediction_est_rule[i].append(self.Estimated_rules[optimal_rule[failed_idx.index(i)]]["rule"].dopredict(data))
+
+            # 予測が成功したアプリは分類器の予測結果を保存
+            else:
+                self.prediction_est_rule[i].append(self.prediction[i][-1])
+
+
+    # # 共通ルールをマージする
+    # def merge_rule(self, apps, optimal_rules):
+    #
+    #     for rule_id, estimated_rule in enumerate(self.Estimated_rules):
+    #
+    #         # いずれかのアプリの最適ルールでない場合
+    #         if not any([rule_id is opt_rule for opt_rule in optimal_rules]):
+    #
+    #
 
 
 
@@ -133,20 +348,39 @@ class CImodel:
 
 if __name__ == '__main__':
 
-    classifier = classify.LSTMa(cfg.TYPE_LENGTH, cfg.LSTM_REFERENCE_STEPS, epochs=2)
+    # 分類器を生成
+    classifier = classify.LSTMa(cfg.TYPE_LENGTH, cfg.LSTM_REFERENCE_STEPS, epochs=cfg.LSTM_EPOCHS)
 
+    # CIMを生成
     CIM = CImodel(cfg, classifier)
 
+    # データを生成
+    data = DataStore(cfg)
+
+    # メインループ
     for season in range(cfg.SPAN):
 
-        new_trendrule = CIM.run(season)
+        if cfg.SHOW_MODEL_DETAIL:
+            print("season:" + str(season))
 
-        ### 時系列更新処理
-        # for app in apps:
-            ## 各アプリのデータを更新
+        # 今期のデータをCIMに入力する
+        new_trendrule = CIM.run(data.apps, season)
 
-        ## トレンドルールを更新
+        # アプリの時系列データを更新
+        for app in data.apps:
+            app.update(data.trend_rule)
 
+        # トレンドルールを更新
+        data.trend_rule.update()
+
+        if cfg.SHOW_MODEL_DETAIL:
+            print("")
 
     # モデルの結果を出力
+    fg = figure("result/Research/research", 200, cfg.SPAN, data, CIM)
+
+    fg.savefig_result("PredictTrend", start_offset=cfg.LSTM_REFERENCE_STEPS)
+    fg.savefig_ruleweight("TrendRuleW")
+    fg.savefig_chosenrule("ChosenRule")
+    fg.savefig_compare_prediction("ComparePrediction", start_offset=cfg.LSTM_REFERENCE_STEPS)
 

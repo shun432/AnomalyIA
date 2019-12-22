@@ -6,14 +6,34 @@
 
 import sampledata as sd
 
+# モデル進行状態の表示
+SHOW_MODEL_DETAIL = True
+
 # アプリの数
-APP_NUM = 5
+APP_NUM = 10
 
 # 全体の期間
 SPAN = 100
 
 # トレンドルールの毎シーズン更新度　（大きいところころルールが変わる）
 SHIFT_TREND_RULE = 0.05
+
+
+# 分類器の予測誤差でデータを間引くための閾値
+EVALUATE_THRESHOLD_PRED_FAIL = 0.2
+
+
+# 分析器のアプリのサンプリング数
+SAMPLING = 3
+
+# 分析器のルール削除のための閾値
+EVALUATE_THRESHOLD_DELETE_RULE = 0.3
+
+# 分析器の新ルール適用のための閾値
+EVALUATE_THRESHOLD_ADD_RULE = 0.2
+
+# 分析器の新ルールが何個のアプリ以上で採用かの閾値
+THRESHOLD_APPNUM = 3
 
 
 # アプリの特徴の形
@@ -51,5 +71,15 @@ TYPE_LENGTH = len(DATATYPE)
 
 
 
-# LSTM用パラメータ
+# 分類器LSTM用パラメータ
 LSTM_REFERENCE_STEPS = 10
+LSTM_EPOCHS = 2
+
+
+
+# 分析器NN用パラメータ
+NN_EPOCHS = 20
+
+
+
+
