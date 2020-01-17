@@ -26,14 +26,20 @@ EVALUATE_THRESHOLD_PRED_FAIL = 0.2
 # 分析器のアプリのサンプリング数
 SAMPLING = 3
 
-# 分析器のルール削除のための閾値
+# 分析器のルール削除のための閾値（これ以上で消去）
 EVALUATE_THRESHOLD_DELETE_RULE = 0.3
 
-# 分析器の新ルール適用のための閾値
+# 分析器の新ルール適用のための閾値（これ未満で追加）
 EVALUATE_THRESHOLD_ADD_RULE = 0.2
+
+# 分析器のマージのための閾値（これ未満のアプリの組み合わせでマージ）
+EVALUATE_THRESHOLD_MERGE_RULE = 0.2
 
 # 分析器の新ルールが何個のアプリ以上で採用かの閾値
 THRESHOLD_APPNUM = 3
+
+# 分析器の新ルール作成試行回数
+TRY_NEWRULE_NUM = 5
 
 
 # アプリの特徴の形

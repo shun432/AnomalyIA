@@ -65,11 +65,20 @@ class CImodel:
         self.dd = classifier.data_dimension
 
 
+        ############ data ############
+
         self.prediction = [[] for i in range(self.app_num)]
         self.history = [[] for i in range(self.app_num)]
 
         self.prediction_est_rule = [[] for i in range(self.app_num)]
         self.Estimated_rules = []
+
+        self.predfail_app_num = []
+        self.rule_num = []
+        self.add_rule_num = []
+        self.lost_rule_num = []
+        self.useless_rule_num = []
+        self.merge_rule_num = []
 
 
     # CIMの1シーズン分を実行
@@ -87,7 +96,9 @@ class CImodel:
 
             # 前シーズンの予測評価、上手くいかなかったアプリを返す
             predict_failure_apps, failed_idx = self.classify_evaluate_previous(apps, cfg.EVALUATE_THRESHOLD_PRED_FAIL)
-            print("LSTMの予測失敗アプリ数 :" + str(len(predict_failure_apps)))
+            self.predfail_app_num.append(len(predict_failure_apps))
+            if cfg.SHOW_MODEL_DETAIL:
+                print("LSTMの予測失敗アプリ数 :" + str(len(predict_failure_apps)))
 
             # トレンド予測が上手くいかなかったアプリのデータオーグメントをする（仮）
             augmented_apps = predict_failure_apps
@@ -95,6 +106,7 @@ class CImodel:
             # トレンド予測が上手くいかなかったアプリの分析・分析結果から予測
             self.analyse_failure(augmented_apps, failed_idx, apps)
 
+            self.rule_num.append(len(self.Estimated_rules))
             if cfg.SHOW_MODEL_DETAIL:
                 print("ルール数：" + str(len(self.Estimated_rules)))
 
@@ -159,10 +171,13 @@ class CImodel:
         self.check_existing_rule(failed_apps)
 
         # 新ルールの捕捉を試みる
-        if self.capture_new_rule(failed_apps, apps) and cfg.SHOW_MODEL_DETAIL:
-            print("新ルールを追加")
-        elif cfg.SHOW_MODEL_DETAIL:
-            print("ルールの追加はありませんでした")
+        new_rule_num = 0
+        for i in range(cfg.TRY_NEWRULE_NUM):
+            if self.capture_new_rule(failed_apps, apps):
+                new_rule_num += 1
+        self.add_rule_num.append(new_rule_num)
+        if cfg.SHOW_MODEL_DETAIL:
+            print("追加された新ルール数：" + str(new_rule_num))
 
         if len(self.Estimated_rules) > 0:
 
@@ -172,13 +187,20 @@ class CImodel:
             # 推定ルールを使って流行予測
             self.predict_with_est_rule(failed_apps, failed_idx, apps, optimal_rule)
 
+            # 全く同じアプリにしか通用しないルール同士があれば高性能な方にマージする
+            self.merge_rule(failed_apps, optimal_rule)
+
         else:
             for i, app in enumerate(apps):
                 self.prediction_est_rule[i].append(self.prediction[i][-1])
+            self.merge_rule_num.append(0)
 
 
     # 既存の推定ルールを見直す
     def check_existing_rule(self, pred_fail_apps):
+
+        lost_rule_num = 0
+        useless_rule_num = 0
 
         for rule_id, estimated_rule in enumerate(self.Estimated_rules):
 
@@ -207,11 +229,13 @@ class CImodel:
 
                     if estimated_rule["status"] is "disappointed":
                         self.Estimated_rules.remove(estimated_rule)
+                        lost_rule_num += 1
                         if cfg.SHOW_MODEL_DETAIL:
                             print("消去したルール:" + str(rule_id))
 
                     elif estimated_rule["status"] is "":
                         estimated_rule["status"] = "disappointed"
+                        useless_rule_num += 1
                         if cfg.SHOW_MODEL_DETAIL:
                             print("不使用のルール:" + str(rule_id))
 
@@ -220,6 +244,9 @@ class CImodel:
 
             if estimated_rule["status"] is "new":
                 estimated_rule["status"] = ""
+
+        self.lost_rule_num.append(lost_rule_num)
+        self.useless_rule_num.append(useless_rule_num)
 
 
     # 新しくルールの捕捉を試みる
@@ -325,22 +352,54 @@ class CImodel:
                     print("except is called in capture_new_rule2()")
 
                 # 予測失敗アプリのprediction_est_ruleに分析器の予測を保存
-                self.prediction_est_rule[i].append(self.Estimated_rules[optimal_rule[failed_idx.index(i)]]["rule"].dopredict(data))
+                self.prediction_est_rule[i].append(self.Estimated_rules[optimal_rule[failed_idx.index(i)]]["rule"].dopredict(data)[0][0])
 
             # 予測が成功したアプリは分類器の予測結果を保存
             else:
                 self.prediction_est_rule[i].append(self.prediction[i][-1])
 
 
-    # # 共通ルールをマージする
-    # def merge_rule(self, apps, optimal_rules):
-    #
-    #     for rule_id, estimated_rule in enumerate(self.Estimated_rules):
-    #
-    #         # いずれかのアプリの最適ルールでない場合
-    #         if not any([rule_id is opt_rule for opt_rule in optimal_rules]):
-    #
-    #
+    # 共通ルールをマージする
+    def merge_rule(self, pred_fail_apps, optimal_rules):
+
+        rule_for_these_apps = [[] for i in range(len(self.Estimated_rules))]
+
+        merge_num = 0
+
+        for rule_id, estimated_rule in enumerate(self.Estimated_rules):
+
+            for i, app in enumerate(pred_fail_apps):
+
+                # 分析に前処理が必要であれば実行する
+                try:
+                    # 前シーズンから過去10個分を切り出し
+                    data, _ = estimated_rule["rule"].preprocessing([u[-2] for u in app.featureVector[:]])
+                except:
+                    data = app.featureVector[-2]
+                    print("except is called in check_existing_rule()")
+
+                # 既存のルールを前シーズンのデータで予測して評価する
+                evaluate = abs(estimated_rule["rule"].dopredict(data) - app.trend[-2])[0][0]
+
+                # このルールによるロスが閾値未満のアプリ
+                if evaluate < cfg.EVALUATE_THRESHOLD_MERGE_RULE:
+                    rule_for_these_apps[rule_id].append(i)
+
+            # いずれかのアプリの最適ルールでない場合
+            if not any([rule_id is opt_rule for opt_rule in optimal_rules]):
+
+                # このルールによるロスが閾値未満のアプリが他のルールの組み合わせと一致している場合
+                if any([rule_for_these_apps[rule_id] == rule_for_these_apps[i] for i in range(len(self.Estimated_rules)) if not i == rule_id]):
+
+                    # 削除
+                    self.Estimated_rules.remove(estimated_rule)
+                    merge_num += 1
+
+        self.merge_rule_num.append(merge_num)
+        if cfg.SHOW_MODEL_DETAIL and merge_num is not 0:
+            print("マージされたルール数：" + str(merge_num))
+
+
 
 
 
@@ -383,4 +442,4 @@ if __name__ == '__main__':
     fg.savefig_ruleweight("TrendRuleW")
     fg.savefig_chosenrule("ChosenRule")
     fg.savefig_compare_prediction("ComparePrediction", start_offset=cfg.LSTM_REFERENCE_STEPS)
-
+    fg.savefig_rule_num("RuleMoving", start_offset=cfg.LSTM_REFERENCE_STEPS)
