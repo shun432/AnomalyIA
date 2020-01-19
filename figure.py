@@ -350,18 +350,18 @@ class figure:
 
             for j in range(self.span - start_offset):
 
-                ave = 0
-                ave_e = 0
+                sum = 0
+                sum_e = 0
 
                 for i in range(len(self.app)):
 
-                    ave += abs(self.prediction[i][j] - self.app[i].trend[j + start_offset])
+                    sum += abs(self.prediction[i][j] - self.app[i].trend[j + start_offset])
                     if j is not self.span - start_offset - 1:
-                        ave_e += abs(self.prediction_e[i][j] - self.app[i].trend[j + start_offset])
+                        sum_e += abs(self.prediction_e[i][j] - self.app[i].trend[j + start_offset + 1])
 
-                prediction.append(ave / (self.span - start_offset))
+                prediction.append(sum / len(self.app))
                 if j is not self.span - start_offset - 1:
-                    prediction_e.append(ave_e / (self.span - start_offset))
+                    prediction_e.append(sum_e / len(self.app))
 
             plt.figure(figsize=(len(x) / 10, 5.5))
 
