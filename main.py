@@ -6,6 +6,7 @@ import augment
 import analysis
 from figure import figure
 import random
+import time
 
 
 # データを保存するクラス
@@ -91,6 +92,8 @@ class CImodel:
         # 前シーズンの予測の評価・分析
         if season >= self.rs + 1:
 
+            start = time.time()
+
             # 分類器の学習
             self.classify_learn(apps)
 
@@ -109,6 +112,11 @@ class CImodel:
             self.rule_num.append(len(self.Estimated_rules))
             if cfg.SHOW_MODEL_DETAIL:
                 print("ルール数：" + str(len(self.Estimated_rules)))
+
+            end = time.time()
+
+            if cfg.SHOW_MODEL_DETAIL:
+                print("処理時間：" + str(end - start))
 
 
     # 分類器で流行予測する
@@ -220,8 +228,8 @@ class CImodel:
                     # 既存のルールを前シーズンのデータで予測して評価する
                     evaluate = abs(estimated_rule["rule"].dopredict(data) - app.trend[-2])[0][0]
 
-                    # このルールによるロスが閾値以上のアプリ数
-                    if evaluate >= cfg.EVALUATE_THRESHOLD_DELETE_RULE:
+                    # このルールによるロスが閾値未満のアプリ数
+                    if evaluate < cfg.EVALUATE_THRESHOLD_DELETE_RULE:
                         num += 1
 
                 # 不要なルールは削除
@@ -416,6 +424,8 @@ if __name__ == '__main__':
     # データを生成
     data = DataStore(cfg)
 
+    start = time.time()
+
     # メインループ
     for season in range(cfg.SPAN):
 
@@ -435,6 +445,10 @@ if __name__ == '__main__':
         if cfg.SHOW_MODEL_DETAIL:
             print("")
 
+    end = time.time()
+
+    print("合計時間：" + str(end - start))
+
     # モデルの結果を出力
     fg = figure("result/Research/research", 200, cfg.SPAN, data, CIM)
 
@@ -442,4 +456,6 @@ if __name__ == '__main__':
     fg.savefig_ruleweight("TrendRuleW")
     fg.savefig_chosenrule("ChosenRule")
     fg.savefig_compare_prediction("ComparePrediction", start_offset=cfg.LSTM_REFERENCE_STEPS)
+    fg.savefig_compare_prediction_ave("ComparePredictionAverage", start_offset=cfg.LSTM_REFERENCE_STEPS)
     fg.savefig_rule_num("RuleMoving", start_offset=cfg.LSTM_REFERENCE_STEPS)
+    fg.save_config("config", cfg)

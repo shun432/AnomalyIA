@@ -83,7 +83,7 @@ class figure:
             if len(self.trend_rule.w) <= 10:
                 cycle_tr = plt.rcParams['axes.prop_cycle'].by_key()['color']
             elif len(self.trend_rule.w) <= 20:
-                cycle_tr = plt.cm.get_cmap('tab20')
+                cycle_tr = plt.cm.get_cmap('tab20').colors
             else:
                 cycle_tr = list(colors.XKCD_COLORS.items())[:100]
 
@@ -91,7 +91,7 @@ class figure:
 
                 min, max = self.find_min_max([self.prediction[i], self.prediction_e[i]], self.span)
 
-                plt.figure(figsize=(len(x) / 10, 5))
+                plt.figure(figsize=(len(x) / 10, 5.5))
 
                 # （chosenRuleより）
                 for j in range(len(self.trend_rule.w)):
@@ -115,6 +115,8 @@ class figure:
                     plt.scatter(x[start_offset + 1:], self.eval_loss[i], alpha=0.3, marker="X",
                                 label="eval loss")
 
+                plt.xlabel('season')
+                plt.ylabel('trend value')
                 plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
                 plt.subplots_adjust(right=0.8)
                 plt.savefig(self.app_dire[i] + name + ".png", dpi=self.dpi)
@@ -122,13 +124,13 @@ class figure:
 
         else:
 
-            plt.figure(figsize=(len(x)/10, 5))
+            plt.figure(figsize=(len(x)/10, 5.5))
 
             # アプリごとの色
             if len(self.app) <= 10:
                 cycle_app = plt.rcParams['axes.prop_cycle'].by_key()['color']
             elif len(self.app) <= 20:
-                cycle_app = plt.cm.get_cmap('tab20')
+                cycle_app = plt.cm.get_cmap('tab20').colors
             else:
                 cycle_app = list(colors.XKCD_COLORS.items())[:100]
 
@@ -143,6 +145,8 @@ class figure:
                     plt.scatter(x[start_offset+1:], self.eval_loss[i], color=cycle_app[i], alpha=0.3, marker="X",
                                 label="evalu loss (app:" + str(i) + ")")
 
+            plt.xlabel('season')
+            plt.ylabel('trend value')
             plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
             plt.subplots_adjust(right=0.8)
             plt.savefig(self.dire + name + ".png", dpi=self.dpi)
@@ -161,18 +165,20 @@ class figure:
             if len(self.trend_rule.w[0]) <= 10:
                 cycle_ft = plt.rcParams['axes.prop_cycle'].by_key()['color']
             elif len(self.trend_rule.w[0]) <= 20:
-                cycle_ft = plt.cm.get_cmap('tab20')
+                cycle_ft = plt.cm.get_cmap('tab20').colors
             else:
                 cycle_ft = list(colors.XKCD_COLORS.items())[:100]
 
             for i in range(len(self.trend_rule.w)):
 
-                plt.figure(figsize=(len(x) / 10, 5))
+                plt.figure(figsize=(len(x) / 10, 5.5))
 
                 # 特徴毎に
                 for j in range(len(self.trend_rule.w[i])):
                     plt.plot(x, self.trend_rule.w[i][j][:-1], color=cycle_ft[j], label="feature:" + str(j))
 
+                plt.xlabel('season')
+                plt.ylabel('weight of trend rule')
                 plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
                 plt.subplots_adjust(right=0.8)
                 plt.savefig(self.trend_dire[i] + name + ".png", dpi=self.dpi)
@@ -182,13 +188,13 @@ class figure:
 
         else:
 
-            plt.figure(figsize=(len(x)/10, 5))
+            plt.figure(figsize=(len(x)/10, 5.5))
 
             # トレンドルールごとの色
             if len(self.trend_rule.w) <= 10:
                 cycle_tr = plt.rcParams['axes.prop_cycle'].by_key()['color']
             elif len(self.trend_rule.w) <= 20:
-                cycle_tr = plt.cm.get_cmap('tab20')
+                cycle_tr = plt.cm.get_cmap('tab20').colors
             else:
                 cycle_tr = list(colors.XKCD_COLORS.items())[:100]
 
@@ -196,7 +202,7 @@ class figure:
             if len(self.trend_rule.w[0]) <= 10:
                 cycle_ft = plt.rcParams['axes.prop_cycle'].by_key()['color']
             elif len(self.trend_rule.w[0]) <= 20:
-                cycle_ft = plt.cm.get_cmap('tab20')
+                cycle_ft = plt.cm.get_cmap('tab20').colors
             else:
                 cycle_ft = list(colors.XKCD_COLORS.items())[:100]
 
@@ -216,6 +222,8 @@ class figure:
                 plt.fill_between(list(range(self.span+1)), [- i * 2.0 + 1] * (len(x)+1), [- (i+1) * 2.0 + 1] * (len(x)+1),
                                  facecolor=cycle_tr[i], alpha=0.2, label="trendrule:" + str(i))
 
+            plt.xlabel('season')
+            plt.ylabel('weight of trend rule')
             plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
             plt.subplots_adjust(right=0.8)
             plt.savefig(self.dire + name + ".png", dpi=self.dpi)
@@ -235,13 +243,13 @@ class figure:
 
         else:
 
-            plt.figure(figsize=(len(x)/10, 5))
+            plt.figure(figsize=(len(x)/10, 5.5))
 
             # アプリごとの色
             if len(self.app) <= 10:
                 cycle_app = plt.rcParams['axes.prop_cycle'].by_key()['color']
             elif len(self.app) <= 20:
-                cycle_app = plt.cm.get_cmap('tab20')
+                cycle_app = plt.cm.get_cmap('tab20').colors
             else:
                 cycle_app = list(colors.XKCD_COLORS.items())[:100]
 
@@ -249,7 +257,7 @@ class figure:
             if len(self.trend_rule.w) <= 10:
                 cycle_tr = plt.rcParams['axes.prop_cycle'].by_key()['color']
             elif len(self.trend_rule.w) <= 20:
-                cycle_tr = plt.cm.get_cmap('tab20')
+                cycle_tr = plt.cm.get_cmap('tab20').colors
             else:
                 cycle_tr = list(colors.XKCD_COLORS.items())[:100]
 
@@ -266,6 +274,7 @@ class figure:
                 plt.scatter(x, np.array([- id] * len(x)), color="w", s=70)
                 plt.scatter(x, np.array([- id] * len(x)), color=colorArr, s=15, marker="D", alpha=0.5)
 
+            plt.xlabel('シーズン')
             plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
             plt.subplots_adjust(right=0.8)
             plt.savefig(self.dire + name + ".png", dpi=self.dpi)
@@ -283,7 +292,7 @@ class figure:
 
             for i in range(len(self.app)):
 
-                plt.figure(figsize=(len(x) / 10, 5))
+                plt.figure(figsize=(len(x) / 10, 5.5))
 
                 plt.plot(x[start_offset:],
                          np.abs(np.array(self.prediction[i]) - np.array(self.app[i].trend[start_offset:])),
@@ -292,6 +301,8 @@ class figure:
                          np.abs(np.array(self.prediction_e[i]) - np.array(self.app[i].trend[start_offset + 1:])),
                          label="analyse loss")
 
+                plt.xlabel('season')
+                plt.ylabel('prediction loss')
                 plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
                 plt.subplots_adjust(right=0.8)
                 plt.savefig(self.app_dire[i] + name + ".png", dpi=self.dpi)
@@ -300,13 +311,13 @@ class figure:
 
         else:
 
-            plt.figure(figsize=(len(x)/10, 5))
+            plt.figure(figsize=(len(x)/10, 5.5))
 
             # アプリごとの色
             if len(self.app) <= 10:
                 cycle_app = plt.rcParams['axes.prop_cycle'].by_key()['color']
             elif len(self.app) <= 20:
-                cycle_app = plt.cm.get_cmap('tab20')
+                cycle_app = plt.cm.get_cmap('tab20').colors
             else:
                 cycle_app = list(colors.XKCD_COLORS.items())[:100]
 
@@ -317,6 +328,8 @@ class figure:
                 plt.plot(x[start_offset + 1:], np.abs(np.array(self.prediction_e[id]) - np.array(self.app[id].trend[start_offset + 1:])),
                          color=cycle_app[id], label="analyse loss (app:" + str(id) + ")")
 
+            plt.xlabel('season')
+            plt.ylabel('prediction loss')
             plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
             plt.subplots_adjust(right=0.8)
             plt.savefig(self.dire + name + ".png", dpi=self.dpi)
@@ -326,28 +339,62 @@ class figure:
         return
 
 
+    def savefig_compare_prediction_ave(self, name, start_offset=0):
+
+        x = list(range(self.span))
+
+        if self.diff_dir:
+
+            prediction = []
+            prediction_e = []
+
+            for j in range(self.span - start_offset):
+
+                ave = 0
+                ave_e = 0
+
+                for i in range(len(self.app)):
+
+                    ave += abs(self.prediction[i][j] - self.app[i].trend[j + start_offset])
+                    if j is not self.span - start_offset - 1:
+                        ave_e += abs(self.prediction_e[i][j] - self.app[i].trend[j + start_offset])
+
+                prediction.append(ave / (self.span - start_offset))
+                if j is not self.span - start_offset - 1:
+                    prediction_e.append(ave_e / (self.span - start_offset))
+
+            plt.figure(figsize=(len(x) / 10, 5.5))
+
+            plt.xlabel('season')
+            plt.ylabel('prediction loss average')
+            plt.plot(x[start_offset:], prediction, label="classify loss", linestyle="dotted")
+            plt.plot(x[start_offset + 1:], prediction_e, label="analyse loss")
+
+            plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+            plt.subplots_adjust(right=0.8)
+            plt.savefig(self.dire + name + ".png", dpi=self.dpi)
+
+            plt.clf()
+
+
     def savefig_rule_num(self, name, start_offset=0):
 
         x = list(range(self.span))
 
-        plt.figure(figsize=(len(x)/10, 5))
+        plt.figure(figsize=(len(x)/10, 5.5))
 
         chart_num = 6
         width = 0.8 / chart_num
 
-        plt.bar(x[start_offset + 1:] + np.array([width * 0.0] * len(x[start_offset + 1:])),
-                 self.predfail_app_num, align='edge', width=width, label="predfail_app_num")
-        plt.bar(x[start_offset + 1:] + np.array([width * 1.0] * len(x[start_offset + 1:])),
-                 self.rule_num, align='edge', width=width, label="rule_num")
-        plt.bar(x[start_offset + 1:] + np.array([width * 2.0] * len(x[start_offset + 1:])),
-                 self.add_rule_num, align='edge', width=width, label="add_rule_num")
-        plt.bar(x[start_offset + 1:] + np.array([width * 3.0] * len(x[start_offset + 1:])),
-                 self.lost_rule_num, align='edge', width=width, label="lost_rule_num")
-        plt.bar(x[start_offset + 1:] + np.array([width * 4.0] * len(x[start_offset + 1:])),
-                 self.useless_rule_num, align='edge', width=width, label="useless_rule_num")
-        plt.bar(x[start_offset + 1:] + np.array([width * 5.0] * len(x[start_offset + 1:])),
-                 self.merge_rule_num,  align='edge', width=width, label="merge_rule_num")
+        plt.plot(x[start_offset + 1:], self.predfail_app_num, label="prediction fail app")
+        plt.plot(x[start_offset + 1:], self.rule_num, label="rule")
+        plt.plot(x[start_offset + 1:], self.add_rule_num, label="add rule")
+        plt.plot(x[start_offset + 1:], self.lost_rule_num, label="lost rule")
+        plt.plot(x[start_offset + 1:], self.useless_rule_num, label="useless rule")
+        plt.plot(x[start_offset + 1:], self.merge_rule_num, label="merge rule")
 
+        plt.xlabel('season')
+        plt.ylabel('number')
         plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         plt.subplots_adjust(right=0.8)
         plt.savefig(self.dire + name + ".png", dpi=self.dpi)
@@ -356,4 +403,33 @@ class figure:
 
         return
 
+    def save_config(self, name, cfg):
 
+        import json
+
+        setting = dict(
+            APP_NUM = cfg.APP_NUM,
+            SPAN = cfg.SPAN,
+            SHIFT_TREND_RULE = cfg.SHIFT_TREND_RULE,
+            EVALUATE_THRESHOLD_PRED_FAIL = cfg.EVALUATE_THRESHOLD_PRED_FAIL,
+            SAMPLING = cfg.SAMPLING,
+            EVALUATE_THRESHOLD_DELETE_RULE = cfg.EVALUATE_THRESHOLD_DELETE_RULE,
+            EVALUATE_THRESHOLD_ADD_RULE = cfg.EVALUATE_THRESHOLD_ADD_RULE,
+            EVALUATE_THRESHOLD_MERGE_RULE = cfg.EVALUATE_THRESHOLD_MERGE_RULE,
+            THRESHOLD_APPNUM = cfg.THRESHOLD_APPNUM,
+            TRY_NEWRULE_NUM = cfg.TRY_NEWRULE_NUM,
+            LSTM_REFERENCE_STEPS = cfg.LSTM_REFERENCE_STEPS,
+            LSTM_EPOCHS = cfg.LSTM_EPOCHS,
+            NN_EPOCHS = cfg.NN_EPOCHS,
+            DATATYPE = [dict(
+                name = feat["name"],
+                type = str(type(feat["data"]))
+            ) for feat in cfg.DATATYPE],
+            FIRST_BIN = cfg.FIRST_BIN,
+            FIRST_W = cfg.FIRST_W
+        )
+
+        fw = open(self.dire + name + '.json', 'w')
+        json.dump(setting, fw, indent=4)
+
+        return
