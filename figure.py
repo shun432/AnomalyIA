@@ -20,6 +20,8 @@ class figure:
         self.prediction = CIM.prediction
         self.prediction_e = CIM.prediction_est_rule
 
+        self.prediction_only_ci = CIM.prediction_only_ci
+
         self.predfail_app_num = CIM.predfail_app_num
         self.rule_num = CIM.rule_num
         self.add_rule_num = CIM.add_rule_num
@@ -300,6 +302,11 @@ class figure:
                 plt.plot(x[start_offset + 1:],
                          np.abs(np.array(self.prediction_e[i]) - np.array(self.app[i].trend[start_offset + 1:])),
                          label="analyse loss")
+
+                # *************************(変更してください)
+                plt.plot(x[start_offset + 1:],
+                         np.abs(np.array(self.prediction_only_ci[i]) - np.array(self.app[i].trend[start_offset + 1:])),
+                         label="only ci loss")
 
                 plt.xlabel('season')
                 plt.ylabel('prediction loss')

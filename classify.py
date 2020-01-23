@@ -134,11 +134,12 @@ class LSTMa:
     http://cedro3.com/ai/keras-lstm/
     '''
 
-    def __init__(self, data_dim, timesteps=10, epochs=10):
+    def __init__(self, data_dim, timesteps=10, epochs=10, reference_offset=0):
 
         self.reference_steps = timesteps
         self.data_dimension = data_dim
         self.epochs = epochs
+        self.reference_offset = reference_offset
 
         self.model = None
 
@@ -149,11 +150,11 @@ class LSTMa:
     def preprocessing(self, data, target=None):
 
         # 最後からreference_steps個を保存
-        data = np.array([u[- self.reference_steps:] for u in data]).T.reshape(self.reference_steps, self.data_dimension, 1)
+        data = np.array([u[- self.reference_steps - self.reference_offset: - self.reference_offset] for u in data]).T.reshape(self.reference_steps, self.data_dimension, 1)
 
         # 最後からreference_steps個を保存
         if target is not None:
-            target = np.array(target[- self.reference_steps:]).reshape(self.reference_steps, 1)
+            target = np.array(target[- self.reference_steps - self.reference_offset: - self.reference_offset]).reshape(self.reference_steps, 1)
 
         return data, target
 
