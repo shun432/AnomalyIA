@@ -47,7 +47,7 @@ class DataStore:
                 j += 1
 
         # トレンドルールを登録
-        self.trend_rule = sd.TrendRule(cfg.FIRST_W, cfg.TYPE_LENGTH, delta=cfg.SHIFT_TREND_RULE)
+        self.trend_rule = sd.TrendRule(cfg.FIRST_RULE_NUM, cfg.TYPE_LENGTH, cfg.APPEAR_RATE, cfg.DISAPPEAR_RATE, delta=cfg.SHIFT_TREND_RULE)
 
 
 # CIモデル
@@ -113,7 +113,7 @@ class CImodel:
 
             self.rule_num.append(len(self.Estimated_rules))
             if cfg.SHOW_MODEL_DETAIL:
-                print("ルール数：" + str(len(self.Estimated_rules)))
+                print("捕捉ルール数：" + str(len(self.Estimated_rules)))
 
             end = time.time()
 
@@ -479,7 +479,9 @@ if __name__ == '__main__':
             app.update(data.trend_rule)
 
         # トレンドルールを更新
-        data.trend_rule.update()
+        data.trend_rule.update(season)
+        if cfg.SHOW_MODEL_DETAIL:
+            print("実存するルール数")
 
         if cfg.SHOW_MODEL_DETAIL:
             print("")

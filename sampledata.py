@@ -221,11 +221,33 @@ class BinaryType:
 # 流行のルールを管理する。どの特徴を重視するかをwで調節。複数のルールをwに格納できる
 class TrendRule:
 
-    def __init__(self, init_w, datalen, delta=0.1):
+    def __init__(self, first_rule_num, datalen, appear_r, disappear_r, delta=0.1):
 
-        self.w = init_w
         self.datalen = datalen
+
+        # W[ルール][値or状態][特徴][時系列]
+        self.w = [{"value": self.initialize_w(self.datalen, 0), "status": "exist"} for j in range(first_rule_num)]
+        self.appear_r = appear_r
+        self.disappear_r = disappear_r
         self.delta = delta
+
+    # 重みの初期化方法の定義
+    def initialize_w(self, len_f, today):
+
+        if today > 0:
+
+            init_w = []
+
+            for i in range(len_f):
+                w = [0] * today
+                w.append(random.uniform(-1, 1))
+                init_w.append(w)
+
+        else:
+            init_w = [[random.uniform(-1, 1)] for i in range(len_f)]
+
+
+        return init_w
 
     # ルールを適用して流行度合いを返す
     def apply(self, currentdata):
@@ -236,7 +258,7 @@ class TrendRule:
         for i in range(len(self.w)):
             val = 0
             for j in range(self.datalen):
-                val += self.w[i][j][-1] * currentdata[j]
+                val += self.w[i]["value"][j][-1] * currentdata[j]
             if val > val_max:
                 applied_idx = i
                 val_max = val
@@ -244,12 +266,38 @@ class TrendRule:
         return val_max, applied_idx
 
     # ルールを更新する
-    def update(self):
+    def update(self, today):
 
-        for i in range(len(self.w)):
-            for j in range(len(self.w[i])):
-                w = self.w[i][j][-1] + self.delta * random.uniform(-1, 1)
-                self.w[i][j].append(min(max(w, -1.0), 1.0))
+        if random.random() < self.appear_r:
+            self.new(today)
+
+        if random.random() < self.disappear_r:
+
+            selected = random.randint(0, len(self.w) - 1)
+            self.lost(self.w[selected])
+
+        for i, w_i in enumerate(self.w):
+
+            if self.w[i]["status"] is "exist":
+
+                for j, w_ij in enumerate(w_i["value"]):
+                    w = w_ij[-1] + self.delta * random.uniform(-1, 1)
+                    w_ij.append(min(max(w, -1.0), 1.0))
+
+            else:   # if status is lost
+
+                for j, w_ij in enumerate(w_i["value"]):
+                    w_ij.append(0)
+
+    # 新ルールを追加する
+    def new(self, today):
+
+        self.w.append({"value": self.initialize_w(self.datalen, today), "status": "exist"})
+
+    # ルールの削除
+    def lost(self, rule):
+
+        rule["status"] = "lost"
 
 
 
@@ -263,16 +311,13 @@ if __name__ == '__main__':
     app1.addDataType(BinaryType(possibility=0, initval=1), "Bina")
 
     # データタイプを増やすと横に広げる、縦に広げると並列ルールが増える
-    init_w = [[[ 0.2], [ 0.5], [ 0.2], [-0.1]],
-              [[ 0.2], [ 0.5], [-0.5], [ 0.3]],
-              [[ 0.2], [ 0.2], [ 0.5], [-0.3]],
-              [[ 0.0], [ 0.0], [ 0.8], [ 0.2]]]
+    rule_num = 4
 
-    trend_rule = TrendRule(init_w, app1.typelength, delta=0.05)
+    trend_rule = TrendRule(rule_num, app1.typelength, 0.1, 0.1, delta=0.05)
 
     for i in range(100):
         app1.update(trend_rule)
-        trend_rule.update()
+        trend_rule.update(i)
 
     print("create data completed...")
 
@@ -292,7 +337,7 @@ if __name__ == '__main__':
     for i in range(len(trend_rule.w)):
         for j in range(len(trend_rule.w[i])):
             bottom = np.array(i * 2.0)
-            plt.bar(x + np.array([width * float(j)]*len(x)), trend_rule.w[i][j][:-1],
+            plt.bar(x + np.array([width * float(j)]*len(x)), trend_rule.w[i]["value"][j][:-1],
                     color=cycle[j], align='edge', bottom=bottom, width=width)
 
     plt.bar(x, [0.05] * len(x), color="blue", align='edge', bottom=np.array(app1.trend_idx)*2, width=0.8)

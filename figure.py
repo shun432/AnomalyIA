@@ -164,9 +164,9 @@ class figure:
         if self.diff_dir:
 
             # 特徴ごとの色
-            if len(self.trend_rule.w[0]) <= 10:
+            if len(self.trend_rule.w[0]["value"]) <= 10:
                 cycle_ft = plt.rcParams['axes.prop_cycle'].by_key()['color']
-            elif len(self.trend_rule.w[0]) <= 20:
+            elif len(self.trend_rule.w[0]["value"]) <= 20:
                 cycle_ft = plt.cm.get_cmap('tab20').colors
             else:
                 cycle_ft = list(colors.XKCD_COLORS.items())[:100]
@@ -176,8 +176,8 @@ class figure:
                 plt.figure(figsize=(len(x) / 10, 5.5))
 
                 # 特徴毎に
-                for j in range(len(self.trend_rule.w[i])):
-                    plt.plot(x, self.trend_rule.w[i][j][:-1], color=cycle_ft[j], label="feature:" + str(j))
+                for j in range(len(self.trend_rule.w[i]["value"])):
+                    plt.plot(x, self.trend_rule.w[i]["value"][j][:-1], color=cycle_ft[j], label="feature:" + str(j))
 
                 plt.xlabel('season')
                 plt.ylabel('weight of trend rule')
@@ -201,24 +201,24 @@ class figure:
                 cycle_tr = list(colors.XKCD_COLORS.items())[:100]
 
             # 特徴ごとの色
-            if len(self.trend_rule.w[0]) <= 10:
+            if len(self.trend_rule.w[0]["value"]) <= 10:
                 cycle_ft = plt.rcParams['axes.prop_cycle'].by_key()['color']
-            elif len(self.trend_rule.w[0]) <= 20:
+            elif len(self.trend_rule.w[0]["value"]) <= 20:
                 cycle_ft = plt.cm.get_cmap('tab20').colors
             else:
                 cycle_ft = list(colors.XKCD_COLORS.items())[:100]
 
-            width = 0.8 / len(self.trend_rule.w[0])
+            width = 0.8 / len(self.trend_rule.w[0]["value"])
             #トレンドルール毎に
             for i in range(len(self.trend_rule.w)):
                 bottom = np.array(- i * 2.0)
                 # 特徴毎に
-                for j in range(len(self.trend_rule.w[i])):
+                for j in range(len(self.trend_rule.w[i]["value"])):
                     if i == 0:
                         plt.bar(x + np.array([width * float(j)] * len(x)), self.trend_rule.w[i][j][:-1],
                                 color=cycle_ft[j], align='edge', bottom=bottom, width=width, label="feature:" + str(j))
                     else:
-                        plt.bar(x + np.array([width * float(j)] * len(x)), self.trend_rule.w[i][j][:-1],
+                        plt.bar(x + np.array([width * float(j)] * len(x)), self.trend_rule.w[i]["value"][j][:-1],
                                 color=cycle_ft[j], align='edge', bottom=bottom, width=width)
 
                 plt.fill_between(list(range(self.span+1)), [- i * 2.0 + 1] * (len(x)+1), [- (i+1) * 2.0 + 1] * (len(x)+1),
@@ -417,7 +417,11 @@ class figure:
         setting = dict(
             APP_NUM = cfg.APP_NUM,
             SPAN = cfg.SPAN,
+            REVEAL_TREND = cfg.REVEAL_TREND,
+            FIRST_RULE_NUM=cfg.FIRST_RULE_NUM,
             SHIFT_TREND_RULE = cfg.SHIFT_TREND_RULE,
+            APPEAR_RATE = cfg.APPEAR_RATE,
+            DISAPPEAR_RATE = cfg.DISAPPEAR_RATE,
             EVALUATE_THRESHOLD_PRED_FAIL = cfg.EVALUATE_THRESHOLD_PRED_FAIL,
             SAMPLING = cfg.SAMPLING,
             EVALUATE_THRESHOLD_DELETE_RULE = cfg.EVALUATE_THRESHOLD_DELETE_RULE,
@@ -432,8 +436,7 @@ class figure:
                 name = feat["name"],
                 type = str(type(feat["data"]))
             ) for feat in cfg.DATATYPE],
-            FIRST_BIN = cfg.FIRST_BIN,
-            FIRST_W = cfg.FIRST_W
+            FIRST_BIN = cfg.FIRST_BIN
         )
 
         fw = open(self.dire + name + '.json', 'w')
