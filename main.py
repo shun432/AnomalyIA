@@ -88,7 +88,7 @@ class CImodel:
     def run(self, apps, season):
 
         # 各アプリについてトレンド予測する
-        if season >= self.rs + cfg.REVEAL_TREND:
+        if season >= self.rs + 1:
             self.classify_predict(apps)
 
         # 前シーズンの予測の評価・分析
@@ -149,7 +149,7 @@ class CImodel:
             # 分類に前処理が必要であれば実行する
             try:
                 # 前シーズンから過去10個分を切り出し
-                data, target = self.classifier.preprocessing([u[:-1] for u in app.featureVector[:]], app.trend[:-1])
+                data, target = self.classifier.preprocessing([u[:-1] for u in app.featureVector[:]], app.trend[:-1], reference_offset=cfg.REVEAL_TREND)
             except:
                 data, target = app.featureVector[:-1], app.trend[:-1]
                 print("except is called in classify_learn()")
@@ -167,7 +167,7 @@ class CImodel:
         for i, app in enumerate(apps):
 
             # 前シーズンのアプリトレンド値と予測結果を比べる
-            if abs(app.trend[-2] - self.prediction[i][-2]) > Threshold:
+            if abs(app.trend[-2] - self.prediction[i][-cfg.REVEAL_TREND-1]) > Threshold:
                 predict_failure_apps.append(app)
                 idx.append(i)
 
@@ -223,9 +223,9 @@ class CImodel:
                     # 分析に前処理が必要であれば実行する
                     try:
                         # 前シーズンから過去10個分を切り出し
-                        data, _ = estimated_rule["rule"].preprocessing([u[-cfg.REVEAL_TREND-2] for u in app.featureVector[:]])
+                        data, _ = estimated_rule["rule"].preprocessing([u[-cfg.REVEAL_TREND-1] for u in app.featureVector[:]])
                     except:
-                        data = app.featureVector[-cfg.REVEAL_TREND-2]
+                        data = app.featureVector[-cfg.REVEAL_TREND-1]
                         print("except is called in check_existing_rule()")
 
                     # 既存のルールを前シーズンのデータで予測して評価する
@@ -275,9 +275,9 @@ class CImodel:
             # 分析に前処理が必要であれば実行する
             try:
                 # 前シーズンから過去10個分を切り出し
-                data, target = analyser.preprocessing([u[-cfg.REVEAL_TREND-2] for u in app.featureVector[:]], app.trend[-2])
+                data, target = analyser.preprocessing([u[-cfg.REVEAL_TREND-1] for u in app.featureVector[:]], app.trend[-2])
             except:
-                data, target = app.featureVector[-cfg.REVEAL_TREND-2], app.trend[-2]
+                data, target = app.featureVector[-cfg.REVEAL_TREND-1], app.trend[-2]
                 print("except is called in capture_new_rule1()")
 
             analyser.dofit(data, target)
@@ -292,9 +292,9 @@ class CImodel:
                 # 分析に前処理が必要であれば実行する
                 try:
                     # 前シーズンから過去10個分を切り出し
-                    data, _ = analyser.preprocessing([u[-cfg.REVEAL_TREND-2] for u in app.featureVector[:]])
+                    data, _ = analyser.preprocessing([u[-cfg.REVEAL_TREND-1] for u in app.featureVector[:]])
                 except:
-                    data = app.featureVector[-cfg.REVEAL_TREND-2]
+                    data = app.featureVector[-cfg.REVEAL_TREND-1]
                     print("except is called in capture_new_rule2()")
 
                 evaluate = abs(analyser.dopredict(data) - app.trend[-2])[0][0]
@@ -329,9 +329,9 @@ class CImodel:
                 # 分析に前処理が必要であれば実行する
                 try:
                     # 前シーズンから過去10個分を切り出し
-                    data, _ = estimated_rule["rule"].preprocessing([u[-cfg.REVEAL_TREND-2] for u in app.featureVector[:]])
+                    data, _ = estimated_rule["rule"].preprocessing([u[-cfg.REVEAL_TREND-1] for u in app.featureVector[:]])
                 except:
-                    data = app.featureVector[-cfg.REVEAL_TREND-2]
+                    data = app.featureVector[-cfg.REVEAL_TREND-1]
                     print("except is called in counseling()")
 
                 evaluate = abs(estimated_rule["rule"].dopredict(data) - app.trend[-2])[0][0]
@@ -377,21 +377,8 @@ class CImodel:
             data = None
 
             # 分析に前処理が必要であれば実行する
-            try:
-                # 前シーズンから過去10個分を切り出し
-                data, _ = self.Estimated_rules[optimal_rule[i]]["rule"].preprocessing(
-                    [u[-cfg.REVEAL_TREND-1] for u in app.featureVector[:]])
-            except:
-                print("self.Estimated_rules")
-                print(self.Estimated_rules)
-                print("optimal :")
-                print(optimal_rule)
-                print("failed_idx")
-                print(failed_idx)
-                print("failed_idx.index(i)")
-                print(failed_idx.index(i))
-            #     data = app.featureVector[-cfg.REVEAL_TREND-1]
-            #     print("except is called in predict_with_est_rule()")
+            # 前シーズンから過去10個分を切り出し
+            data, _ = self.Estimated_rules[optimal_rule[i]]["rule"].preprocessing([u[-1] for u in app.featureVector[:]])
 
             self.prediction_only_ci[i].append(self.Estimated_rules[optimal_rule[i]]["rule"].dopredict(data)[0][0])
 
@@ -419,9 +406,9 @@ class CImodel:
                 # 分析に前処理が必要であれば実行する
                 try:
                     # 前シーズンから過去10個分を切り出し
-                    data, _ = estimated_rule["rule"].preprocessing([u[-cfg.REVEAL_TREND-2] for u in app.featureVector[:]])
+                    data, _ = estimated_rule["rule"].preprocessing([u[-cfg.REVEAL_TREND-1] for u in app.featureVector[:]])
                 except:
-                    data = app.featureVector[-cfg.REVEAL_TREND-2]
+                    data = app.featureVector[-cfg.REVEAL_TREND-1]
                     print("except is called in check_existing_rule()")
 
                 # 既存のルールを前シーズンのデータで予測して評価する
@@ -455,7 +442,7 @@ if __name__ == '__main__':
 
     # 分類器を生成
     classifier = classify.LSTMa(cfg.TYPE_LENGTH, cfg.LSTM_REFERENCE_STEPS,
-                                epochs=cfg.LSTM_EPOCHS, reference_offset=cfg.REVEAL_TREND)
+                                epochs=cfg.LSTM_EPOCHS)
 
     # CIMを生成
     CIM = CImodel(cfg, classifier)
@@ -480,8 +467,6 @@ if __name__ == '__main__':
 
         # トレンドルールを更新
         data.trend_rule.update(season)
-        if cfg.SHOW_MODEL_DETAIL:
-            print("実存するルール数")
 
         if cfg.SHOW_MODEL_DETAIL:
             print("")
@@ -493,8 +478,8 @@ if __name__ == '__main__':
     # モデルの結果を出力
     fg = figure("result/Research/research", 200, cfg.SPAN, data, CIM)
 
-    start_offset = cfg.LSTM_REFERENCE_STEPS + cfg.REVEAL_TREND
-    fg.savefig_result("PredictTrend", start_offset=start_offset)
+    start_offset = cfg.LSTM_REFERENCE_STEPS - 1
+    fg.savefig_result("PredictTrend", cfg.LSTM_REFERENCE_STEPS)
     fg.savefig_ruleweight("TrendRuleW")
     fg.savefig_chosenrule("ChosenRule")
     fg.savefig_compare_prediction("ComparePrediction", start_offset=start_offset)
