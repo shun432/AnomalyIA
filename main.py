@@ -475,14 +475,16 @@ if __name__ == '__main__':
 
     print("合計時間：" + str(end - start))
 
-    # モデルの結果を出力
-    fg = figure("result/Research/research", 200, cfg.SPAN, data, CIM)
+    rs = cfg.LSTM_REFERENCE_STEPS + 1
+    rt = cfg.REVEAL_TREND
 
-    start_offset = cfg.LSTM_REFERENCE_STEPS - 1
-    fg.savefig_result("PredictTrend", cfg.LSTM_REFERENCE_STEPS)
+    # モデルの結果を出力
+    fg = figure("result/Research/research", 200, cfg.SPAN, data, CIM, reference_steps=rs, reveal_trend=rt)
+
+    fg.savefig_result("PredictTrend")
     fg.savefig_ruleweight("TrendRuleW")
     fg.savefig_chosenrule("ChosenRule")
-    fg.savefig_compare_prediction("ComparePrediction", start_offset=start_offset)
-    fg.savefig_compare_prediction_ave("ComparePredictionAverage", start_offset=start_offset)
-    fg.savefig_rule_num("RuleMoving", start_offset=start_offset)
+    fg.savefig_compare_prediction("ComparePrediction")
+    fg.savefig_compare_prediction_ave("ComparePredictionAverage")
+    fg.savefig_rule_num("RuleMoving")
     fg.save_config("config", cfg)

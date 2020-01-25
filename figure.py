@@ -6,8 +6,8 @@ import numpy as np
 
 class figure:
 
-
-    def __init__(self, dire, dpi, span, data, CIM, learn_loss=None, eval_loss=None, different_dir_app=True):
+    def __init__(self, dire, dpi, span, data, CIM,
+                 learn_loss=None, eval_loss=None, different_dir_app=True, reference_steps=0, reveal_trend=1):
 
         self.dire = self.new_num_directory(dire)
         self.app_dire = [self.make_num_directory("app", i) for i in range(data.app_num)]
@@ -31,8 +31,9 @@ class figure:
 
         self.learn_loss = learn_loss
         self.eval_loss = eval_loss
-
         self.diff_dir = different_dir_app
+        self.reference_steps = reference_steps
+        self.reveal_trend = reveal_trend
 
 
     def new_num_directory(self, path):
@@ -75,7 +76,7 @@ class figure:
         return min, max
 
 
-    def savefig_result(self, name, start_offset=0):
+    def savefig_result(self, name):
 
         x = list(range(self.span))
 
@@ -107,14 +108,14 @@ class figure:
 
 
                 plt.plot(x, app.trend, label="trend", linestyle="dotted", color="black")
-                plt.plot(x[start_offset:], self.prediction[i], label="classifier pred", color="blue")
-                plt.plot(x[start_offset + 1:], self.prediction_e[i], label="analyser pred", color="orange")
+                plt.plot(x[self.reference_steps:], self.prediction[i], label="classifier pred", color="blue")
+                plt.plot(x[self.reference_steps + self.reveal_trend:], self.prediction_e[i], label="analyser pred", color="orange")
 
                 if self.learn_loss is not None:
-                    plt.scatter(x[start_offset + 1:], self.learn_loss[i], alpha=0.3,
+                    plt.scatter(x[self.reference_steps + self.reveal_trend:], self.learn_loss[i], alpha=0.3,
                                 label="learn loss")
                 if self.eval_loss is not None:
-                    plt.scatter(x[start_offset + 1:], self.eval_loss[i], alpha=0.3, marker="X",
+                    plt.scatter(x[self.reference_steps + self.reveal_trend:], self.eval_loss[i], alpha=0.3, marker="X",
                                 label="eval loss")
 
                 plt.xlabel('season')
@@ -138,13 +139,13 @@ class figure:
 
             for i, app in enumerate(self.app):
                 plt.plot(x, self.app[i].trend, color=cycle_app[i], label="trend (app:" + str(i) + ")", linestyle="dotted")
-                plt.plot(x[start_offset:], self.prediction[i], color=cycle_app[i], label="pred (app:" + str(i) + ")")
+                plt.plot(x[self.reference_steps:], self.prediction[i], color=cycle_app[i], label="pred (app:" + str(i) + ")")
 
                 if self.learn_loss is not None:
-                    plt.scatter(x[start_offset+1:], self.learn_loss[i], color=cycle_app[i], alpha=0.3,
+                    plt.scatter(x[self.reference_steps + self.reveal_trend:], self.learn_loss[i], color=cycle_app[i], alpha=0.3,
                                 label="learn loss (app:" + str(i) + ")")
                 if self.eval_loss is not None:
-                    plt.scatter(x[start_offset+1:], self.eval_loss[i], color=cycle_app[i], alpha=0.3, marker="X",
+                    plt.scatter(x[self.reference_steps + self.reveal_trend:], self.eval_loss[i], color=cycle_app[i], alpha=0.3, marker="X",
                                 label="evalu loss (app:" + str(i) + ")")
 
             plt.xlabel('season')
@@ -286,7 +287,7 @@ class figure:
         return
 
 
-    def savefig_compare_prediction(self, name, start_offset=0):
+    def savefig_compare_prediction(self, name):
 
         x = list(range(self.span))
 
@@ -296,16 +297,16 @@ class figure:
 
                 plt.figure(figsize=(len(x) / 10, 5.5))
 
-                plt.plot(x[start_offset:],
-                         np.abs(np.array(self.prediction[i]) - np.array(self.app[i].trend[start_offset:])),
+                plt.plot(x[self.reference_steps:],
+                         np.abs(np.array(self.prediction[i]) - np.array(self.app[i].trend[self.reference_steps:])),
                          label="classify loss", linestyle="dotted")
-                plt.plot(x[start_offset + 1:],
-                         np.abs(np.array(self.prediction_e[i]) - np.array(self.app[i].trend[start_offset + 1:])),
+                plt.plot(x[self.reference_steps + self.reveal_trend:],
+                         np.abs(np.array(self.prediction_e[i]) - np.array(self.app[i].trend[self.reference_steps + self.reveal_trend:])),
                          label="analyse loss")
 
                 # *************************(変更してください)
-                plt.plot(x[start_offset + 1:],
-                         np.abs(np.array(self.prediction_only_ci[i]) - np.array(self.app[i].trend[start_offset + 1:])),
+                plt.plot(x[self.reference_steps + self.reveal_trend:],
+                         np.abs(np.array(self.prediction_only_ci[i]) - np.array(self.app[i].trend[self.reference_steps + self.reveal_trend:])),
                          label="only ci loss")
 
                 plt.xlabel('season')
@@ -330,9 +331,9 @@ class figure:
 
             for id in range(len(self.app)):
 
-                plt.plot(x[start_offset:], np.abs(np.array(self.prediction[id]) - np.array(self.app[id].trend[start_offset:])),
+                plt.plot(x[self.reference_steps:], np.abs(np.array(self.prediction[id]) - np.array(self.app[id].trend[self.reference_steps:])),
                          color=cycle_app[id], label="classify loss (app:" + str(id) + ")", linestyle="dotted")
-                plt.plot(x[start_offset + 1:], np.abs(np.array(self.prediction_e[id]) - np.array(self.app[id].trend[start_offset + 1:])),
+                plt.plot(x[self.reference_steps + self.reveal_trend:], np.abs(np.array(self.prediction_e[id]) - np.array(self.app[id].trend[self.reference_steps + self.reveal_trend:])),
                          color=cycle_app[id], label="analyse loss (app:" + str(id) + ")")
 
             plt.xlabel('season')
@@ -346,7 +347,7 @@ class figure:
         return
 
 
-    def savefig_compare_prediction_ave(self, name, start_offset=0):
+    def savefig_compare_prediction_ave(self, name):
 
         x = list(range(self.span))
 
@@ -355,27 +356,32 @@ class figure:
             prediction = []
             prediction_e = []
 
-            for j in range(self.span - start_offset):
+            # 各アプリに対して平均を算出
+            for j in range(self.span - self.reference_steps):
 
                 sum = 0
                 sum_e = 0
 
                 for i in range(len(self.app)):
 
-                    sum += abs(self.prediction[i][j] - self.app[i].trend[j + start_offset])
-                    if j is not self.span - start_offset - 1:
-                        sum_e += abs(self.prediction_e[i][j] - self.app[i].trend[j + start_offset + 1])
+                    sum += abs(self.prediction[i][j] - self.app[i].trend[j + self.reference_steps])
+                    if j < self.span - self.reference_steps - self.reveal_trend:
+                        try:
+                            sum_e += abs(self.prediction_e[i][j] - self.app[i].trend[j + self.reference_steps + self.reveal_trend])
+                        except:
+                            print("self.app[i].trend: " + str(len(self.app[i].trend)))
+                            print("j + self.reference_steps + self.reveal_trend: " + str(j + self.reference_steps + self.reveal_trend))
 
                 prediction.append(sum / len(self.app))
-                if j is not self.span - start_offset - 1:
+                if j < self.span - self.reference_steps - self.reveal_trend:
                     prediction_e.append(sum_e / len(self.app))
 
             plt.figure(figsize=(len(x) / 10, 5.5))
 
             plt.xlabel('season')
             plt.ylabel('prediction loss average')
-            plt.plot(x[start_offset:], prediction, label="classify loss", linestyle="dotted")
-            plt.plot(x[start_offset + 1:], prediction_e, label="analyse loss")
+            plt.plot(x[self.reference_steps:], prediction, label="classify loss", linestyle="dotted")
+            plt.plot(x[self.reference_steps + self.reveal_trend:], prediction_e, label="analyse loss")
 
             plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
             plt.subplots_adjust(right=0.8)
@@ -384,7 +390,7 @@ class figure:
             plt.clf()
 
 
-    def savefig_rule_num(self, name, start_offset=0):
+    def savefig_rule_num(self, name):
 
         x = list(range(self.span))
 
@@ -393,12 +399,12 @@ class figure:
         chart_num = 6
         width = 0.8 / chart_num
 
-        plt.plot(x[start_offset + 1:], self.predfail_app_num, label="prediction fail app")
-        plt.plot(x[start_offset + 1:], self.rule_num, label="rule")
-        plt.plot(x[start_offset + 1:], self.add_rule_num, label="add rule")
-        plt.plot(x[start_offset + 1:], self.lost_rule_num, label="lost rule")
-        plt.plot(x[start_offset + 1:], self.useless_rule_num, label="useless rule")
-        plt.plot(x[start_offset + 1:], self.merge_rule_num, label="merge rule")
+        plt.plot(x[self.reference_steps + self.reveal_trend:], self.predfail_app_num, label="prediction fail app")
+        plt.plot(x[self.reference_steps + self.reveal_trend:], self.rule_num, label="rule")
+        plt.plot(x[self.reference_steps + self.reveal_trend:], self.add_rule_num, label="add rule")
+        plt.plot(x[self.reference_steps + self.reveal_trend:], self.lost_rule_num, label="lost rule")
+        plt.plot(x[self.reference_steps + self.reveal_trend:], self.useless_rule_num, label="useless rule")
+        plt.plot(x[self.reference_steps + self.reveal_trend:], self.merge_rule_num, label="merge rule")
 
         plt.xlabel('season')
         plt.ylabel('number')
