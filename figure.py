@@ -23,7 +23,7 @@ class figure:
         self.prediction_only_ci = CIM.prediction_only_ci
 
         self.predfail_app_num = CIM.predfail_app_num
-        self.rule_num = CIM.rule_num
+        self.cap_rule_num = CIM.cap_rule_num
         self.add_rule_num = CIM.add_rule_num
         self.lost_rule_num = CIM.lost_rule_num
         self.useless_rule_num = CIM.useless_rule_num
@@ -108,8 +108,10 @@ class figure:
 
 
                 plt.plot(x, app.trend, label="trend", linestyle="dotted", color="black")
-                plt.plot(x[self.reference_steps:], self.prediction[i], label="classifier pred", color="blue")
-                plt.plot(x[self.reference_steps + self.reveal_trend:], self.prediction_e[i], label="analyser pred", color="orange")
+                plt.plot(x[self.reference_steps:], self.prediction[i],
+                         label="LSTM pred", linestyle="dotted", color="blue")
+                plt.plot(x[self.reference_steps + self.reveal_trend:], self.prediction_e[i],
+                         label="CIM pred", color="orange")
 
                 if self.learn_loss is not None:
                     plt.scatter(x[self.reference_steps + self.reveal_trend:], self.learn_loss[i], alpha=0.3,
@@ -297,17 +299,17 @@ class figure:
 
                 plt.figure(figsize=(len(x) / 10, 5.5))
 
-                plt.plot(x[self.reference_steps:],
-                         np.abs(np.array(self.prediction[i]) - np.array(self.app[i].trend[self.reference_steps:])),
-                         label="classify loss", linestyle="dotted")
-                plt.plot(x[self.reference_steps + self.reveal_trend:],
-                         np.abs(np.array(self.prediction_e[i]) - np.array(self.app[i].trend[self.reference_steps + self.reveal_trend:])),
-                         label="analyse loss")
-
                 # *************************(変更してください)
                 plt.plot(x[self.reference_steps + self.reveal_trend:],
                          np.abs(np.array(self.prediction_only_ci[i]) - np.array(self.app[i].trend[self.reference_steps + self.reveal_trend:])),
-                         label="only ci loss")
+                         label="only CI loss", linestyle="dotted", color="green")
+
+                plt.plot(x[self.reference_steps:],
+                         np.abs(np.array(self.prediction[i]) - np.array(self.app[i].trend[self.reference_steps:])),
+                         label="LSTM loss", linestyle="dotted", color="blue")
+                plt.plot(x[self.reference_steps + self.reveal_trend:],
+                         np.abs(np.array(self.prediction_e[i]) - np.array(self.app[i].trend[self.reference_steps + self.reveal_trend:])),
+                         label="CIM loss", color="orange")
 
                 plt.xlabel('season')
                 plt.ylabel('prediction loss')
@@ -355,33 +357,39 @@ class figure:
 
             prediction = []
             prediction_e = []
+            prediction_ci = []
 
             # 各アプリに対して平均を算出
             for j in range(self.span - self.reference_steps):
 
                 sum = 0
                 sum_e = 0
+                sum_ci = 0
 
                 for i in range(len(self.app)):
 
-                    sum += abs(self.prediction[i][j] - self.app[i].trend[j + self.reference_steps])
+                    sum += (self.prediction[i][j] - self.app[i].trend[j + self.reference_steps])**2
                     if j < self.span - self.reference_steps - self.reveal_trend:
-                        try:
-                            sum_e += abs(self.prediction_e[i][j] - self.app[i].trend[j + self.reference_steps + self.reveal_trend])
-                        except:
-                            print("self.app[i].trend: " + str(len(self.app[i].trend)))
-                            print("j + self.reference_steps + self.reveal_trend: " + str(j + self.reference_steps + self.reveal_trend))
+
+                        sum_e += (self.prediction_e[i][j] - self.app[i].trend[j + self.reference_steps + self.reveal_trend])**2
+                        sum_ci += (self.prediction_e[i][j] - self.app[i].trend[j + self.reference_steps + self.reveal_trend])**2
 
                 prediction.append(sum / len(self.app))
                 if j < self.span - self.reference_steps - self.reveal_trend:
                     prediction_e.append(sum_e / len(self.app))
+                    prediction_ci.append(sum_ci / len(self.app))
 
             plt.figure(figsize=(len(x) / 10, 5.5))
 
             plt.xlabel('season')
             plt.ylabel('prediction loss average')
-            plt.plot(x[self.reference_steps:], prediction, label="classify loss", linestyle="dotted")
-            plt.plot(x[self.reference_steps + self.reveal_trend:], prediction_e, label="analyse loss")
+
+            # *************************(変更してください)
+            plt.plot(x[self.reference_steps + self.reveal_trend:], prediction_ci,
+                     label="only CI loss", linestyle="dotted")
+
+            plt.plot(x[self.reference_steps:], prediction, label="LSTM loss", linestyle="dotted")
+            plt.plot(x[self.reference_steps + self.reveal_trend:], prediction_e, label="CIM loss")
 
             plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
             plt.subplots_adjust(right=0.8)
@@ -399,8 +407,9 @@ class figure:
         chart_num = 6
         width = 0.8 / chart_num
 
+        plt.plot(x[self.reference_steps + self.reveal_trend:], self.predfail_app_num, label="truth rule number")
         plt.plot(x[self.reference_steps + self.reveal_trend:], self.predfail_app_num, label="prediction fail app")
-        plt.plot(x[self.reference_steps + self.reveal_trend:], self.rule_num, label="rule")
+        plt.plot(x[self.reference_steps + self.reveal_trend:], self.cap_rule_num, label="captured rule")
         plt.plot(x[self.reference_steps + self.reveal_trend:], self.add_rule_num, label="add rule")
         plt.plot(x[self.reference_steps + self.reveal_trend:], self.lost_rule_num, label="lost rule")
         plt.plot(x[self.reference_steps + self.reveal_trend:], self.useless_rule_num, label="useless rule")

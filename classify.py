@@ -153,7 +153,7 @@ class LSTMa:
 
         # 最後からreference_steps個を保存
         if target is not None:
-            target = np.array(target[- self.reference_steps:]).reshape(self.reference_steps, 1)
+            target = np.array(target[- self.reference_steps - reference_offset: - reference_offset]).reshape(self.reference_steps, 1)
 
         return data, target
 

@@ -231,6 +231,8 @@ class TrendRule:
         self.disappear_r = disappear_r
         self.delta = delta
 
+        self.rule_num = len(self.w)
+
     # 重みの初期化方法の定義
     def initialize_w(self, len_f, today):
 
@@ -270,11 +272,13 @@ class TrendRule:
 
         if random.random() < self.appear_r:
             self.new(today)
+            self.rule_num += 1
 
         if random.random() < self.disappear_r:
 
             selected = random.randint(0, len(self.w) - 1)
             self.lost(self.w[selected])
+            self.rule_num -= 1
 
         for i, w_i in enumerate(self.w):
 

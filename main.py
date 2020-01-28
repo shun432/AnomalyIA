@@ -76,8 +76,9 @@ class CImodel:
 
         self.prediction_only_ci = [[] for i in range(self.app_num)]  # *****************
 
+        self.act_rule_num = [cfg.FIRST_RULE_NUM]
         self.predfail_app_num = []
-        self.rule_num = []
+        self.cap_rule_num = []
         self.add_rule_num = []
         self.lost_rule_num = []
         self.useless_rule_num = []
@@ -89,6 +90,7 @@ class CImodel:
 
         # 各アプリについてトレンド予測する
         if season >= self.rs + 1:
+            print("")
             self.classify_predict(apps)
 
         # 前シーズンの予測の評価・分析
@@ -102,22 +104,27 @@ class CImodel:
             # 前シーズンの予測評価、上手くいかなかったアプリを返す
             predict_failure_apps, failed_idx = self.classify_evaluate_previous(apps, cfg.EVALUATE_THRESHOLD_PRED_FAIL)
             self.predfail_app_num.append(len(predict_failure_apps))
-            if cfg.SHOW_MODEL_DETAIL:
-                print("LSTMの予測失敗アプリ数 :" + str(len(predict_failure_apps)))
 
             # トレンド予測が上手くいかなかったアプリのデータオーグメントをする（仮）
             augmented_apps = predict_failure_apps
 
-            # トレンド予測が上手くいかなかったアプリの分析・分析結果から予測
+            # 原因推定器（トレンド予測が上手くいかなかったアプリの分析・分析結果から予測）
             self.analyse_failure(augmented_apps, failed_idx, apps)
 
-            self.rule_num.append(len(self.Estimated_rules))
-            if cfg.SHOW_MODEL_DETAIL:
-                print("捕捉ルール数：" + str(len(self.Estimated_rules)))
+            self.cap_rule_num.append(len(self.Estimated_rules))
+
 
             end = time.time()
 
+            print("\r\r")
+            print("")
+
             if cfg.SHOW_MODEL_DETAIL:
+                print("LSTMの予測失敗アプリ数 :" + str(len(predict_failure_apps)))
+                print("削除されたルール数：" + str(self.lost_rule_num[-1]))
+                print("追加された新ルール数：" + str(self.add_rule_num[-1]))
+                print("マージされたルール数：" + str(self.merge_rule_num[-1]))
+                print("捕捉ルール数：" + str(len(self.Estimated_rules)))
                 print("処理時間：" + str(end - start))
 
 
@@ -125,6 +132,8 @@ class CImodel:
     def classify_predict(self, apps):
 
         for i, app in enumerate(apps):
+
+            print("\rLSTM predicting...{}%".format(int(i / (len(apps) - 1) * 100)), end="")
 
             # 分類に前処理が必要であれば実行する
             try:
@@ -146,6 +155,8 @@ class CImodel:
 
         for i, app in enumerate(apps):
 
+            print("\rLSTM learning...{}%".format(int(i / (len(apps) - 1) * 100)), end="")
+
             # 分類に前処理が必要であれば実行する
             try:
                 # 前シーズンから過去10個分を切り出し
@@ -166,8 +177,10 @@ class CImodel:
 
         for i, app in enumerate(apps):
 
+            print("\rLSTM evaluating...{}%".format(int(i / (len(apps) - 1) * 100)), end="")
+
             # 前シーズンのアプリトレンド値と予測結果を比べる
-            if abs(app.trend[-2] - self.prediction[i][-cfg.REVEAL_TREND-1]) > Threshold:
+            if abs(app.trend[-cfg.REVEAL_TREND-1] - self.prediction[i][-cfg.REVEAL_TREND-1]) > Threshold:
                 predict_failure_apps.append(app)
                 idx.append(i)
 
@@ -183,11 +196,10 @@ class CImodel:
         # 新ルールの捕捉を試みる
         new_rule_num = 0
         for i in range(cfg.TRY_NEWRULE_NUM):
+            print("\rtry capture NN model...{}%".format(int(i / (cfg.TRY_NEWRULE_NUM - 1) * 100)), end="")
             if self.capture_new_rule(failed_apps, apps):
                 new_rule_num += 1
         self.add_rule_num.append(new_rule_num)
-        if cfg.SHOW_MODEL_DETAIL:
-            print("追加された新ルール数：" + str(new_rule_num))
 
         if len(self.Estimated_rules) > 0:
 
@@ -215,6 +227,8 @@ class CImodel:
 
         for rule_id, estimated_rule in enumerate(self.Estimated_rules):
 
+            print("\rcheck existing NN model...{}%".format(int(rule_id / (len(self.Estimated_rules) - 1) * 100)), end="")
+
             if estimated_rule["status"] is not "new":
 
                 num = 0
@@ -229,7 +243,7 @@ class CImodel:
                         print("except is called in check_existing_rule()")
 
                     # 既存のルールを前シーズンのデータで予測して評価する
-                    evaluate = abs(estimated_rule["rule"].dopredict(data) - app.trend[-2])[0][0]
+                    evaluate = abs(estimated_rule["rule"].dopredict(data) - app.trend[-cfg.REVEAL_TREND-1])[0][0]
 
                     # このルールによるロスが閾値未満のアプリ数
                     if evaluate < cfg.EVALUATE_THRESHOLD_DELETE_RULE:
@@ -241,14 +255,10 @@ class CImodel:
                     if estimated_rule["status"] is "disappointed":
                         self.Estimated_rules.remove(estimated_rule)
                         lost_rule_num += 1
-                        if cfg.SHOW_MODEL_DETAIL:
-                            print("消去したルール:" + str(rule_id))
 
                     elif estimated_rule["status"] is "":
                         estimated_rule["status"] = "disappointed"
                         useless_rule_num += 1
-                        if cfg.SHOW_MODEL_DETAIL:
-                            print("不使用のルール:" + str(rule_id))
 
                 elif estimated_rule["status"] is "disappointed":
                     estimated_rule["status"] = ""
@@ -275,9 +285,9 @@ class CImodel:
             # 分析に前処理が必要であれば実行する
             try:
                 # 前シーズンから過去10個分を切り出し
-                data, target = analyser.preprocessing([u[-cfg.REVEAL_TREND-1] for u in app.featureVector[:]], app.trend[-2])
+                data, target = analyser.preprocessing([u[-cfg.REVEAL_TREND-1] for u in app.featureVector[:]], app.trend[-cfg.REVEAL_TREND-1])
             except:
-                data, target = app.featureVector[-cfg.REVEAL_TREND-1], app.trend[-2]
+                data, target = app.featureVector[-cfg.REVEAL_TREND-1], app.trend[-cfg.REVEAL_TREND-1]
                 print("except is called in capture_new_rule1()")
 
             analyser.dofit(data, target)
@@ -297,10 +307,7 @@ class CImodel:
                     data = app.featureVector[-cfg.REVEAL_TREND-1]
                     print("except is called in capture_new_rule2()")
 
-                evaluate = abs(analyser.dopredict(data) - app.trend[-2])[0][0]
-
-                # if cfg.SHOW_MODEL_DETAIL:
-                #     print("evaluate analyser :" + str(evaluate))
+                evaluate = abs(analyser.dopredict(data) - app.trend[-cfg.REVEAL_TREND-1])[0][0]
 
                 # このルールによるロスが閾値未満のアプリ数
                 if evaluate < cfg.EVALUATE_THRESHOLD_ADD_RULE:
@@ -319,7 +326,9 @@ class CImodel:
 
         optimal_rule = []
 
-        for app in pred_fail_apps:
+        for i, app in enumerate(pred_fail_apps):
+
+            print("\rget optimal NN model...{}%".format(int(i / (len(pred_fail_apps) - 1) * 100)), end="")
 
             min_loss = None
             optimal_rule.append(None)
@@ -334,7 +343,7 @@ class CImodel:
                     data = app.featureVector[-cfg.REVEAL_TREND-1]
                     print("except is called in counseling()")
 
-                evaluate = abs(estimated_rule["rule"].dopredict(data) - app.trend[-2])[0][0]
+                evaluate = abs(estimated_rule["rule"].dopredict(data) - app.trend[-cfg.REVEAL_TREND-1])[0][0]
 
                 # 最小ロスをそのアプリの最適ルールとして保存
                 if rule_id == 0:
@@ -374,7 +383,7 @@ class CImodel:
 
         for i, app in enumerate(apps):
 
-            data = None
+            print("\rNN model predicting...{}%".format(int(i / (len(apps) - 1) * 100)), end="")
 
             # 分析に前処理が必要であれば実行する
             # 前シーズンから過去10個分を切り出し
@@ -401,6 +410,8 @@ class CImodel:
 
         for rule_id, estimated_rule in enumerate(self.Estimated_rules):
 
+            print("\rmarge NN model...{}%".format(int(rule_id / (len(self.Estimated_rules) - 1) * 100)), end="")
+
             for i, app in enumerate(pred_fail_apps):
 
                 # 分析に前処理が必要であれば実行する
@@ -412,7 +423,7 @@ class CImodel:
                     print("except is called in check_existing_rule()")
 
                 # 既存のルールを前シーズンのデータで予測して評価する
-                evaluate = abs(estimated_rule["rule"].dopredict(data) - app.trend[-2])[0][0]
+                evaluate = abs(estimated_rule["rule"].dopredict(data) - app.trend[-cfg.REVEAL_TREND-1])[0][0]
 
                 # このルールによるロスが閾値未満のアプリ
                 if evaluate < cfg.EVALUATE_THRESHOLD_MERGE_RULE:
@@ -429,8 +440,6 @@ class CImodel:
                     merge_num += 1
 
         self.merge_rule_num.append(merge_num)
-        if cfg.SHOW_MODEL_DETAIL and merge_num is not 0:
-            print("マージされたルール数：" + str(merge_num))
 
 
 
@@ -459,7 +468,7 @@ if __name__ == '__main__':
             print("season:" + str(season))
 
         # 今期のデータをCIMに入力する
-        new_trendrule = CIM.run(data.apps, season)
+        CIM.run(data.apps, season)
 
         # アプリの時系列データを更新
         for app in data.apps:
@@ -467,6 +476,8 @@ if __name__ == '__main__':
 
         # トレンドルールを更新
         data.trend_rule.update(season)
+        # ルール数を記録
+        CIM.act_rule_num.append(data.trend_rule.rule_num)
 
         if cfg.SHOW_MODEL_DETAIL:
             print("")
